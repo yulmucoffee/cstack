@@ -320,7 +320,7 @@ class PackageTests(unittest.TestCase):
         skill = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
         rubric = (ROOT / "skills/cstack/references/review-rubric.md").read_text(encoding="utf-8")
         bugbot = (ROOT / ".cursor/BUGBOT.md").read_text(encoding="utf-8")
-        for phrase in ["Untrusted code does not run.", "`ACT ON` is a `CONFIRMED` defect this change introduces",
+        for phrase in ["Untrusted code does not run unless the user says so.", "`ACT ON` is a `CONFIRMED` defect this change introduces",
                        "Give every reviewer the same prompt", "`INCONCLUSIVE` instead of `PASS`",
                        "`PRE-EXISTING` means it fails the same way on the base commit"]:
             self.assertTrue(phrase in skill, phrase)

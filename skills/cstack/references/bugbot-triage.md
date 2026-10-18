@@ -58,7 +58,7 @@ These start at `candidate` confidence. Use them to look closer, not to dismiss. 
 ### Intentional visual change
 
 - Confidence: candidate
-- Skip when: the PR description or screenshots make the visual change explicit and the comment only restates it.
+- Skip when: the change is visibly intentional in screenshots or a linked design, not only because the PR description says so, and the comment only restates it.
 - Do not skip when: the comment touches accessibility, focus, keyboard navigation, contrast or a component API contract.
 - Example signal: comments about spacing, sizes or shared visual defaults.
 
