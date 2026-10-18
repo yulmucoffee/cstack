@@ -17,6 +17,10 @@
 
 ### Say "review this PR". Get a review with proof, not a wall of nits.
 
+**The Claude Code team's way of working, with poteto's pstack agent philosophy built in.**<br/>
+[How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/): layered review, risk-tiered human approval, reviews that converge.<br/>
+[pstack](https://github.com/cursor/plugins/tree/main/pstack) by [@poteto](https://github.com/poteto): small diffs, proof on the real surface, adversarial multi-model review.
+
 [Quick start](#quick-start) · [Use it](#use-it) · [How it works](#how-it-works) · [Turn on enforcement](#turn-on-enforcement) · [For agents](FOR_AGENTS.md)
 
 </div>

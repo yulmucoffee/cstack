@@ -17,6 +17,10 @@
 
 ### "이 PR 리뷰해줘" 한마디면, 지적의 나열이 아니라 증거가 붙은 리뷰가 옵니다.
 
+**Claude Code 팀이 일하는 방식에 poteto의 pstack 에이전트 철학을 더했습니다.**<br/>
+[Claude Code 팀의 코드 리뷰 방식](https://claude.dev/blog/solving-code-review-at-anthropic/): 여러 겹의 리뷰, 위험도별 사람 승인, 끝없이 돌지 않고 수렴하는 리뷰.<br/>
+[@poteto](https://github.com/poteto)의 [pstack](https://github.com/cursor/plugins/tree/main/pstack): 작은 diff, 실제 실행으로 하는 증명, 여러 모델의 적대적 리뷰.
+
 [빠른 시작](#빠른-시작) · [사용법](#사용법) · [동작 방식](#동작-방식) · [강제 적용 켜기](#강제-적용-켜기) · [에이전트용 안내](FOR_AGENTS.md)
 
 </div>
