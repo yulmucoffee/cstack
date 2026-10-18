@@ -1,6 +1,6 @@
 # Engineering principles
 
-Adapted from the principles in poteto's [pstack](https://github.com/cursor/plugins/tree/main/pstack) (MIT), rewritten for a review-and-merge workflow. In your report, name each principle that changed a decision and say which choice it changed. A principle you did not apply does not get cited.
+Adapted from the principles in poteto's [pstack](https://github.com/cursor/plugins/tree/main/pstack) (MIT), rewritten for a review-and-merge workflow. In the report's `PRINCIPLES` line, name each principle that changed a decision and say which choice it changed. A principle you did not apply does not get cited.
 
 | Principle | Apply when | What it changes | Evidence |
 | --- | --- | --- | --- |

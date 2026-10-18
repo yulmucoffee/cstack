@@ -46,7 +46,7 @@ cstack은 이 둘을 1분이면 설치하는 파일로 묶었습니다.
 
 ### 🔍 증거가 붙은 리뷰
 
-"리뷰해줘"라고 하면 가능하면 서로 다른 모델로 독립 리뷰어 2명을 돌립니다. 발견 사항은 코드를 실행해서 하나씩 확인합니다. 살아남은 지적만, `file:line`과 재현 방법을 붙여서 받습니다.
+"리뷰해줘"라고 하면 같은 프롬프트로 서로 다른 모델의 리뷰어 2명을 돌립니다. 그다음 새 검증 에이전트가 지적을 하나씩 확인하고, 안전할 때는 코드를 실행해 봅니다. 살아남은 지적만, `file:line`과 증거를 붙여서 받습니다.
 
 </td>
 <td width="33%" valign="top">
@@ -114,13 +114,13 @@ doctor가 무엇이 준비됐고 무엇이 남았는지 보여 줍니다. 결과
 
 | 이렇게 말하면 | 이렇게 동작합니다 |
 | --- | --- |
-| "이 PR 리뷰해줘", "review PR 42" | **review**: PR을 읽고 독립 리뷰어 2명을 돌립니다. 지적은 코드를 실행해서 확인한 뒤 보고합니다. 읽기 전용이고, PR 코멘트는 요청할 때만 답니다. |
+| "이 PR 리뷰해줘", "review PR 42" | **review**: PR과 해당 레포 규칙을 읽고, 서로 다른 모델의 리뷰어 2명을 돌린 뒤, 새 검증 에이전트가 지적마다 확인합니다. 읽기 전용이고, PR 코멘트는 요청할 때만 답니다. |
 | "커밋 전에 내 변경사항 봐줘" | 커밋하지 않은 변경을 **review**합니다. |
 | "내보내기 버튼이 두 번 눌려. 고쳐줘" | **fix**: 먼저 재현하고 근본 원인을 고친 뒤 전후를 보여 줍니다. |
 | "PR 42 초록불 만들어줘", "BugBot 코멘트 처리해줘" | **babysit**: 충돌, 리뷰 스레드, CI 순서로 처리합니다. merge-ready에서 멈추고 절대 머지하지 않습니다. |
 | "PR 41~43 ship해줘" | **ship**: 명시적으로 요청할 때만 합니다. 스택 아래부터 검증된 PR만 머지합니다. |
 
-`/code-review`, `/security-review`, Codex `/review` 같은 내장 명령도 그대로 쓰입니다. cstack이 자기 절차 안에서 리뷰어 중 하나로 돌립니다.
+`/code-review`, `/security-review`, Codex `/review` 같은 내장 명령도 그대로 쓰입니다. cstack과 함께 요청하면 추가 검토로 한 번 더 돌립니다.
 
 <details>
 <summary><b>리뷰 보고서 예시</b></summary>
@@ -128,15 +128,16 @@ doctor가 무엇이 준비됐고 무엇이 남았는지 보여 줍니다. 결과
 ```text
 MODE: review | VERDICT: BLOCKED | REF: 6c41928
 FINDINGS: 2 actionable
-  [ACT ON][high]   cart.py:4  coupon > subtotal -> negative total -> repro: total([20], {amount: 50}) == -30
-  [ACT ON][medium] cart.py:4  negative coupon amount raises the price -> repro: {amount: -30} -> 50
+  [ACT ON][high]   cart.py:4  coupon > subtotal -> negative total -> total([20], {amount: 50}) == -30 (CONFIRMED by verifier)
+  [ACT ON][medium] cart.py:4  negative coupon amount raises the price -> {amount: -30} -> 50 (CONFIRMED by verifier)
+DECLINED: percent coupons treated as flat: the change only adds flat coupons
 PROOF: python3 repro.py -> both reproduced on the branch, absent on main
 SAFETY FACT: callers without a coupon are unaffected: PROVED (ran both branches)
-INDEPENDENCE: Sonnet reviewer + Opus reviewer, both found #1 and #2
+REVIEWERS: A=Anthropic/Sonnet, B=Anthropic/Opus, both found #1 and #2 | independence: same-vendor
 NEXT: clamp at zero, validate the amount, add the four missing tests
 ```
 
-데모 레포에서 실제로 돌린 결과입니다. 판정과 개수가 맨 앞에 오고, 증거가 붙고, 실제로 확보한 독립성을 밝히는 순서를 보여 줍니다. 실제 보고는 요청한 언어로 나옵니다.
+지적 내용은 데모 레포에서 실제로 돌린 결과입니다. 다만 그 실행은 새 검증 단계가 생기기 전이라, `CONFIRMED` 표시는 그때의 결과가 아니라 지금의 보고 형식을 보여 줍니다. 보고는 판정과 개수가 맨 앞에 오고, 지적마다 검증 결과가 붙고, 뺀 지적과 이유, 실제로 리뷰한 모델을 밝히는 순서입니다. 실제 보고는 요청한 언어로 나옵니다.
 
 </details>
 
@@ -185,8 +186,10 @@ flowchart LR
 **스킬이 반드시 지키는 것**
 
 - **주장이 아니라 증거.** 모든 주장에 증거를 붙이거나 `measured`, `inferred`, `guess`로 표시합니다.
-- **문서가 아니면 리뷰어 2명.** 짧은 diff도 예외가 아닙니다. 실제로 확보한 독립성을 그대로 밝힙니다.
-- **보고 전 검증.** 스타일 지적은 버립니다. PR 전부터 있던 버그는 따로 표시해서 작성자 탓처럼 보이지 않게 합니다.
+- **문서가 아니면 리뷰어 2명.** 같은 프롬프트, 다른 모델입니다. 짧은 diff도 예외가 아닙니다. 바뀐 줄이 800줄쯤을 넘으면 각 리뷰어가 diff를 부분별로 나눠 차례로 봅니다.
+- **지적마다 새 검증 에이전트.** `CONFIRMED`된 중간 심각도 이상의 지적만 머지를 막을 수 있습니다. 증명되지 않은 고심각도 지적이 있으면 판정은 `PASS`가 아니라 `INCONCLUSIVE`입니다. 리드는 확인된 정확성·보안 지적을 뒤집을 수 없고, 뺀 지적은 이유와 함께 모두 보고합니다.
+- **신뢰할 수 없는 코드는 실행하지 않습니다.** fork나 쓰기 권한이 없는 작성자의 테스트와 빌드는 허락할 때만, 그리고 비밀 정보 없이 돌립니다. 그 외에는 코드를 읽고 추적해서 검토합니다.
+- **규칙은 해당하는 곳에만.** `CLAUDE.md`, `AGENTS.md`, `REVIEW.md`를 base 브랜치에서, PR이 건드린 모든 폴더에 대해 읽습니다. 컨벤션 지적에는 해당 규칙 원문을 인용합니다.
 - **안전의 단 하나의 근거.** 변경이 안전한 단 하나의 사실을 찾아 코드를 실행해서 증명합니다. 증명하지 못하면 `UNPROVEN`이라고 씁니다.
 - **리뷰는 수렴합니다.** 같은 문제로는 최대 세 번까지만 돕니다. 첫 패스 이후에는 새 diff만 보고, 버그 유형을 짚고, 같은 지적을 반복하지 않습니다.
 - **babysit은 ship이 아닙니다.** PR을 초록불로 만들어도 머지는 하지 않습니다.

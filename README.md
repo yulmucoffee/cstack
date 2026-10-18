@@ -46,7 +46,7 @@ cstack packs both into files you install in a minute.
 
 ### 🔍 Reviews with proof
 
-Every "review this" runs two independent reviewers, ideally on different models. Each finding is checked by running the code. You get only the findings that survived, each with a `file:line` and a repro.
+Every "review this" runs two reviewers with the same prompt on different models. A fresh verifier then checks each finding, by running the code when that is safe. You get only the findings that survived, each with a `file:line` and its evidence.
 
 </td>
 <td width="33%" valign="top">
@@ -114,13 +114,13 @@ Just ask, in any words and any language. You do not need to name the skill.
 
 | You say | What happens |
 | --- | --- |
-| "Review this PR", "PR 42 리뷰해줘" | **review**: reads the PR and runs two independent reviewers. Verifies each finding by running code. Reports to you. Read-only. Posts to the PR only if you ask. |
+| "Review this PR", "PR 42 리뷰해줘" | **review**: reads the PR and the repo rules that apply, runs two reviewers on different models, and has a fresh verifier confirm each finding. Reports to you. Read-only. Posts to the PR only if you ask. |
 | "Check my changes before I commit" | **review** of your uncommitted work. |
 | "The export button double-submits. Fix it." | **fix**: reproduces it first, fixes the root cause, shows before and after. |
 | "Get PR 42 green", "Address the BugBot comments" | **babysit**: conflicts, then threads, then CI. Stops at merge-ready and never merges. |
 | "Ship PRs 41 to 43" | **ship**: only when you say so explicitly. Lands the verified PRs from the bottom of the stack. |
 
-Built-in commands such as `/code-review`, `/security-review` and Codex `/review` still work. cstack runs them as reviewers inside its own process.
+Built-in commands such as `/code-review`, `/security-review` and Codex `/review` still work. Ask for one alongside cstack and it runs as an extra pass.
 
 <details>
 <summary><b>What a review report looks like</b></summary>
@@ -128,15 +128,16 @@ Built-in commands such as `/code-review`, `/security-review` and Codex `/review`
 ```text
 MODE: review | VERDICT: BLOCKED | REF: 6c41928
 FINDINGS: 2 actionable
-  [ACT ON][high]   cart.py:4  coupon > subtotal -> negative total -> repro: total([20], {amount: 50}) == -30
-  [ACT ON][medium] cart.py:4  negative coupon amount raises the price -> repro: {amount: -30} -> 50
+  [ACT ON][high]   cart.py:4  coupon > subtotal -> negative total -> total([20], {amount: 50}) == -30 (CONFIRMED by verifier)
+  [ACT ON][medium] cart.py:4  negative coupon amount raises the price -> {amount: -30} -> 50 (CONFIRMED by verifier)
+DECLINED: percent coupons treated as flat: the change only adds flat coupons
 PROOF: python3 repro.py -> both reproduced on the branch, absent on main
 SAFETY FACT: callers without a coupon are unaffected: PROVED (ran both branches)
-INDEPENDENCE: Sonnet reviewer + Opus reviewer, both found #1 and #2
+REVIEWERS: A=Anthropic/Sonnet, B=Anthropic/Opus, both found #1 and #2 | independence: same-vendor
 NEXT: clamp at zero, validate the amount, add the four missing tests
 ```
 
-This is a real run on a demo repository. It shows the order of a report: verdict and count first, proof attached, and the independence it actually had.
+The findings come from a real run on a demo repository. That run predates the fresh-verifier step, so the `CONFIRMED` tags show the current format rather than that run. A report leads with the verdict and count, gives each finding its verifier result, lists what was set aside and why, and names the models that actually reviewed.
 
 </details>
 
@@ -185,8 +186,10 @@ flowchart LR
 **What the skill insists on**
 
 - **Proof, not claims.** Every claim carries its evidence or is labeled `measured`, `inferred` or `guess`.
-- **Two reviewers for anything but docs.** A short diff is not an exception. The skill reports the independence it actually had.
-- **Verify before reporting.** Style-only findings are dropped. Bugs that existed before the PR are labeled, so they do not read as the author's fault.
+- **Two reviewers for anything but docs.** Same prompt, different models. A short diff is not an exception. Over about 800 changed lines, each reviewer goes through the diff in passes, one part at a time.
+- **A fresh verifier for every finding.** Only `CONFIRMED` findings of medium severity or above can block, and an unproven high-severity finding makes the verdict `INCONCLUSIVE`, never `PASS`. The lead cannot overrule a confirmed correctness or security finding, and lists everything it set aside.
+- **Untrusted code is not run.** Tests and builds from forks or authors without write access run only with your approval, and never with your secrets. Otherwise the review traces the code instead.
+- **Rules where they apply.** `CLAUDE.md`, `AGENTS.md` and `REVIEW.md` are read from the base branch in every directory the PR touches, and a convention finding quotes its rule.
 - **One safety fact.** It finds the single fact the change is safe because of and proves it by running code, or says `UNPROVEN`.
 - **Reviews converge.** At most three rounds on one problem. After the first pass it re-reviews only the new diff, names the bug class, and never repeats a finding.
 - **Babysit is not ship.** Getting a PR green never merges it.
