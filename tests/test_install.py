@@ -325,7 +325,7 @@ class PackageTests(unittest.TestCase):
                        "`PRE-EXISTING` means it fails the same way on the base commit"]:
             self.assertTrue(phrase in skill, phrase)
         self.assertFalse("clearly expects it" in skill)
-        for phrase in ["re-anchor every location", "count actionable findings after folding", "never drop it for that", "every commit in `<base>..<head>` was created in this session", "which is always `CONSIDER`",
+        for phrase in ["re-anchor every location", "count actionable findings after folding", "never drop it for that", "was written in this session from your own edits", "needs a second verifier on another model to agree", "even when they say must", "which is always `CONSIDER`",
                        "`CONFIRMED (simulated)`", "verifier independence: limited", "n/a (blocked)",
                        "disposable copy of its own"]:
             self.assertTrue(phrase.lower() in skill.lower(), phrase)
