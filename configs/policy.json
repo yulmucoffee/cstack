@@ -1,0 +1,12 @@
+{
+  "trusted_authors": [],
+  "additional_high_risk_patterns": [
+    "infra/**",
+    "**/deploy/**",
+    "**/production/**"
+  ],
+  "required_check_names": ["Cursor Bugbot"],
+  "required_check_apps": {"Cursor Bugbot": "cursor"},
+  "require_resolved_review_threads": true,
+  "check_wait_seconds": 600
+}

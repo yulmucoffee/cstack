@@ -1,0 +1,14 @@
+{
+  "name": "cstack",
+  "owner": {
+    "name": "yulmucoffee",
+    "url": "https://github.com/yulmucoffee"
+  },
+  "plugins": [
+    {
+      "name": "cstack",
+      "source": "./",
+      "description": "Evidence-first build, review and merge workflow for Claude Code."
+    }
+  ]
+}

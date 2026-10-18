@@ -1,0 +1,6 @@
+interface:
+  display_name: "cstack"
+  short_description: "Evidence-first build, review and merge workflow"
+  default_prompt: "Review my current branch against its intent, prove the riskiest assumption, and give a merge-readiness verdict. Do not merge."
+policy:
+  allow_implicit_invocation: true

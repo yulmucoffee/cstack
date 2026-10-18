@@ -1,0 +1,17 @@
+# Requires Cursor Bugbot enabled for the target GitHub repo.
+version: 1
+triggers:
+  drafts: false
+  frequency: everyPush
+review:
+  effort: smart
+  smartPrompt: >-
+    Prefer high effort for security, authentication, authorization, billing,
+    data loss, concurrency, migrations, CI and deployment. Use default for
+    ordinary code and low for documentation-only changes. If uncertain, use high.
+  incremental: true
+prSummary:
+  mode: comment
+  riskScore: true
+autofix:
+  mode: disabled

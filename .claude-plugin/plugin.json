@@ -1,0 +1,12 @@
+{
+  "name": "cstack",
+  "description": "Evidence-first build, review and merge workflow: layered code review with risk-tiered human approval, plus pstack-style rigor.",
+  "author": {
+    "name": "yulmucoffee",
+    "url": "https://github.com/yulmucoffee"
+  },
+  "homepage": "https://github.com/yulmucoffee/cstack",
+  "repository": "https://github.com/yulmucoffee/cstack",
+  "license": "MIT",
+  "keywords": ["code-review", "merge", "bugbot", "verification", "pstack", "skills"]
+}

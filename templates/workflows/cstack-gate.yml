@@ -1,0 +1,32 @@
+name: cstack risk gate
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+concurrency:
+  group: cstack-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  cstack-risk-gate:
+    name: cstack-risk-gate
+    runs-on: ubuntu-latest
+    # Must exceed check_wait_seconds in .cstack/policy.json (default 600).
+    timeout-minutes: 15
+    steps:
+      # Run ONLY trusted base-branch files. Never check out or execute PR code.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - name: Evaluate PR risk, approvals, checks and review threads
+        run: python3 .cstack/gate.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          CSTACK_CONFIG: .cstack/policy.json
