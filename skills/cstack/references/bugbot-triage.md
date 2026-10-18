@@ -1,12 +1,12 @@
 # BugBot and review-bot triage
 
-Bots catch real bugs and also file non-issues. The goal is to stop treating every comment as a required code change, not to ignore the bot.
+Bots catch real bugs and also file non-issues. The goal is to stop treating every comment as a required code change, not to ignore the bot. This page is for bots and automated reviewers. For a human reviewer's thread, reply with the fix commit or your reasoning, and leave resolving it to them.
 
 ## Decide per thread
 
-- `fix`: a plausible correctness, security, privacy, data-loss, auth, billing, migration, idempotency, race or user-facing behavior issue. Reproduce it, fix it in the lowest PR that owns the code, reply with the commit SHA, resolve the thread.
-- `dismiss`: the current code or context proves no change is needed, or it matches a documented low-risk pattern below. Reply with the concrete disproof and resolve.
-- `ask`: novel, high-severity, security or data related, or ambiguous. Ask the owner instead of guessing.
+- `fix`: you reproduced or traced the issue, and the fix is local and keeps the PR's intended behavior. This includes security, privacy, auth, billing and data issues when both hold; say so in the reply so the owner sees it. Fix it in the lowest PR that owns the code, reply with the commit SHA, resolve the thread.
+- `dismiss`: the current code disproves it, or it matches a pattern below at `recurring` or `strong` confidence. Never dismiss anything on the ask-by-default list. Reply with the concrete disproof and resolve.
+- `ask`: novel and unconfirmed, high severity, or the fix would change intended behavior. Ask the owner instead of guessing.
 
 When unsure, ask. Skipping a noisy style comment is cheap. Skipping a real data or security bug is not.
 
@@ -17,16 +17,15 @@ When unsure, ask. Skipping a noisy style comment is cheap. Skipping a real data 
 
 ## Ask by default
 
-Never auto-dismiss these, even if a similar comment was dismissed before:
+Never dismiss these, even if a similar comment was dismissed before. Fix them under `fix`, or ask:
 
 - Security, privacy, auth, billing, data retention and permission boundaries.
 - Anything the bot marks high severity.
 - Migrations, schemas, idempotency, concurrency and cross-system behavior.
-- Comments whose suggested fix is small and clearly reduces risk without changing intent.
 
 ## Pass count
 
-From the third bot pass on the same PR, lean toward dismissing documented low-risk patterns. Keep escalating anything in the ask-by-default list. A fourth round on the same root cause means the approach needs rethinking, not another patch.
+From the third bot pass on the same PR, close a repeat of an already-disproven finding by linking the earlier disproof. Triage anything new normally. The third round on the same root cause means the approach needs rethinking, not another patch (SKILL.md section 6).
 
 ## Pattern format
 
@@ -45,6 +44,8 @@ Record a recurring dismissal here, or in the repo's `REVIEW.md`, in this shape:
 `candidate` after one or two examples. `recurring` after several verified dismissals. `strong` only for narrow, repeatedly verified, low-risk patterns.
 
 ## Starter patterns
+
+These start at `candidate` confidence. Use them to look closer, not to dismiss. Promote one only after several verified dismissals in your repository.
 
 ### Unused export used later in the stack
 

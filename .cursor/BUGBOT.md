@@ -12,11 +12,11 @@ Review the change against the PR's stated intent and the surrounding repository,
 
 ## How to report
 
-- Anchor every finding to an introduced line with `file:line`. Give the trigger (input, state or ordering), the failure and who notices it, and the cheapest test or repro that would catch it.
+- Anchor every finding with `file:line`, on an introduced line when the bug is in the diff. For a blast-radius or pre-existing bug, cite the affected line outside the diff and say so. Give the trigger (input, state or ordering), the failure and who notices it, and the cheapest test or repro that would catch it.
 - Do not guess from a name. Read the code the finding depends on.
 - Label bugs that existed before this PR as pre-existing.
 - Do not claim you ran tests you did not run. Mark unverified assumptions.
-- At most three nits per review, and none on lines the PR did not change.
+- No nits unless `REVIEW.md` asks for them. Then at most three, and only on changed lines.
 
 ## Converge
 

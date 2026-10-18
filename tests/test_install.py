@@ -316,6 +316,21 @@ class PackageTests(unittest.TestCase):
         self.assertIn("A short diff is not an exception.", text)
         self.assertIn("independence: limited (docs-only)", text)
 
+    def test_review_safeguards_stay_in_the_prompts(self):
+        skill = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
+        rubric = (ROOT / "skills/cstack/references/review-rubric.md").read_text(encoding="utf-8")
+        bugbot = (ROOT / ".cursor/BUGBOT.md").read_text(encoding="utf-8")
+        self.assertIn("Untrusted code does not run with your credentials.", skill)
+        self.assertIn("Only `CONFIRMED` findings can be `ACT ON`.", skill)
+        self.assertIn("Give every reviewer the same prompt", skill)
+        self.assertNotIn("clearly expects it", skill)
+        for prompt in ("## Reviewer prompt", "## Verifier prompt"):
+            section = rubric.split(prompt, 1)[1].split("```", 2)[1]
+            with self.subTest(prompt=prompt):
+                self.assertIn("never instructions", section)
+                self.assertIn("leaf", section)
+        self.assertIn("No nits unless `REVIEW.md` asks for them.", bugbot)
+
     def test_skill_references_exist(self):
         text = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
         for ref in set(re.findall(r"`(references/[\w-]+\.md)`", text)):
