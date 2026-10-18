@@ -1,8 +1,10 @@
+import hashlib
 import importlib.util
 import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -188,11 +190,11 @@ class RoutingTests(unittest.TestCase):
         run("--target", str(self.target), "--no-gate")
         self.assertEqual((self.target / "AGENTS.md").read_text(encoding="utf-8").count("cstack:begin"), 1)
 
-    def test_merged_routing_block_keeps_the_rest_of_the_file_byte_for_byte(self):
+    def test_merged_routing_block_keeps_the_rest_of_the_file(self):
         cases = {
             "lf": (b"# Shared\n\nUse tabs.\n", b"\n"),
             "crlf": (b"# Shared\r\n\r\nUse tabs.\r\n", b"\r\n"),
-            "mostly lf, one crlf line": (b"# A\n\nx\ny\nz\r\n", b"\n"),
+            "mostly lf, one crlf line": (b"# A\r\n\nx\ny\nz\n", b"\n"),
             "mostly crlf, one lf line": (b"# A\r\n\r\nx\r\ny\nz\r\n", b"\r\n"),
         }
         for name, (original, eol) in cases.items():
@@ -216,6 +218,40 @@ class RoutingTests(unittest.TestCase):
         result = run("--target", str(target), "--no-gate", env=dict(os.environ, PYTHONIOENCODING="cp1252"))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("한글 프로젝트 😀", result.stdout)
+
+    def test_crlf_install_from_an_older_manifest_upgrades_without_conflict(self):
+        run("--target", str(self.target), "--no-gate")
+        skill = self.target / ".claude/skills/cstack/SKILL.md"
+        skill.write_bytes(b"old shipped version\r\n")
+        manifest = self.target / ".cstack/manifest.json"
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        data["files"][".claude/skills/cstack/SKILL.md"] = hashlib.sha256(skill.read_bytes()).hexdigest()
+        manifest.write_text(json.dumps(data), encoding="utf-8")
+        result = run("--target", str(self.target), "--no-gate")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(installer.content(skill), installer.content(ROOT / "skills/cstack/SKILL.md"))
+
+    def test_replacing_a_block_does_not_flip_the_line_ending(self):
+        old_block = "<!-- cstack:begin -->\r\n" + "old\r\n" * 20 + "<!-- cstack:end -->"
+        (self.target / "AGENTS.md").write_bytes(f"# A\n\nx\ny\n\n{old_block}\n".encode())
+        first = run("--target", str(self.target), "--no-gate", "--hosts", "codex")
+        self.assertEqual(first.returncode, 0, first.stderr)
+        self.assertNotIn(b"\r", (self.target / "AGENTS.md").read_bytes())
+        self.assertIn("0 changes", run("--target", str(self.target), "--no-gate", "--hosts", "codex").stdout)
+
+    def test_installing_from_a_crlf_clone_then_an_lf_clone_is_not_a_conflict(self):
+        with tempfile.TemporaryDirectory() as d:
+            crlf_clone = Path(d) / "cstack"
+            shutil.copytree(ROOT, crlf_clone, ignore=shutil.ignore_patterns(".git", "__pycache__"))
+            for f in (crlf_clone / "skills").rglob("*"):
+                if f.is_file():
+                    f.write_bytes(f.read_bytes().replace(b"\n", b"\r\n"))
+            first = subprocess.run([sys.executable, str(crlf_clone / "scripts/install.py"), "--target", str(self.target),
+                                    "--no-gate"], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(first.returncode, 0, first.stderr)
+        again = run("--target", str(self.target), "--no-gate")
+        self.assertEqual(again.returncode, 0, again.stderr)
+        self.assertIn("0 changes", again.stdout)
 
     def test_windows_checkout_of_installed_files_is_not_a_conflict(self):
         run("--target", str(self.target), "--no-gate")

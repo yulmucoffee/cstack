@@ -58,9 +58,16 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(content(path)).hexdigest()
 
 
+def unmodified(path: Path, recorded_digest: str | None) -> bool:
+    """True if the file still matches what cstack wrote. Manifests from before CRLF
+    folding hold raw-byte hashes, so accept those too."""
+    return recorded_digest in (sha256(path), hashlib.sha256(path.read_bytes()).hexdigest())
+
+
 def utf8_output():
-    """Print UTF-8 even when stdout is a pipe on Windows (cp949, cp1252), so non-ASCII
-    paths neither crash a finished install nor reach the reader garbled."""
+    """Write UTF-8 even when stdout is a pipe on Windows (cp949, cp1252). A non-ASCII
+    path can no longer crash a finished install, and agents and test harnesses read
+    UTF-8. A PowerShell capture decodes with the console code page instead."""
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
             stream.reconfigure(encoding="utf-8", errors="backslashreplace")
@@ -82,17 +89,23 @@ def line_ending(text: str) -> str:
     return "\r\n" if crlf > text.count("\n") - crlf else "\n"
 
 
-def merged_block(previous: str, body: str, path: Path, eol: str = "\n") -> str:
-    """Insert or replace the one marked cstack block, leaving the rest of the file byte-for-byte.
+def merged_block(previous: str, body: str, path: Path) -> str:
+    """Insert or replace the one marked cstack block.
 
-    Only the block itself is written in `eol`, the file's dominant line ending."""
-    block = eol.join([MARKER_START, *body.rstrip().split("\n"), MARKER_END])
+    Text before and after an existing block is kept byte-for-byte. An appended block
+    goes after the file's content with trailing blank lines trimmed. The block is
+    written in the dominant line ending of the text outside it."""
     starts, ends = previous.count(MARKER_START), previous.count(MARKER_END)
     if starts != ends or starts > 1 or (starts and previous.index(MARKER_END) < previous.index(MARKER_START)):
         raise ValueError(f"{path} has malformed cstack markers; fix or remove the cstack block and rerun")
     if starts:
         before, tail = previous.split(MARKER_START, 1)
         _, after = tail.split(MARKER_END, 1)
+    else:
+        before, after = previous, ""
+    eol = line_ending(before + after)
+    block = eol.join([MARKER_START, *body.rstrip().split("\n"), MARKER_END])
+    if starts:
         return before + block + after
     return previous.rstrip() + (eol * 2 if previous.strip() else "") + block + eol
 
@@ -166,14 +179,14 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
             writes.append((src, dst))
         elif content(dst) == content(src):
             continue
-        elif force or recorded.get(rel) == sha256(dst):
+        elif force or unmodified(dst, recorded.get(rel)):
             writes.append((src, dst))
         else:
             conflicts.append(rel)
     block_updates: list[tuple[Path, str]] = []
     for path, body in block_files(target, hosts, skill_only, routing).items():
         previous = read_untranslated(path) if path.exists() else ""
-        updated = merged_block(previous, body, path, line_ending(previous))
+        updated = merged_block(previous, body, path)
         if updated != previous:
             block_updates.append((path, updated))
     if conflicts:
@@ -183,7 +196,7 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
 
     removals = [rel for rel, digest in recorded.items()
                 if rel not in every_known and rel not in SEED_FILES
-                and (target / rel).is_file() and sha256(target / rel) == digest]
+                and (target / rel).is_file() and unmodified(target / rel, digest)]
     seeds = [] if skill_only else [(rel, src) for rel, src in SEED_FILES.items()
                                    if gate or rel != ".cstack/policy.json"]
 

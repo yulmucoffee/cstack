@@ -179,7 +179,7 @@ def check_github(report: Report, target: Path, policy: dict | None):
         if missing:
             report.todo(f"{branch} does not require {missing}",
                         "With the user's OK and admin rights: gh api -X POST repos/"
-                        f"{name}/rulesets --input {install.ROOT / 'templates/ruleset.json'} (add the repo's own CI checks first). "
+                        f"{name}/rulesets --input \"{install.ROOT / 'templates/ruleset.json'}\" (add the repo's own CI checks first). "
                         "Or set it in Settings > Rules > Rulesets.")
         else:
             report.ok(f"{branch} requires " + ", ".join(wanted))
@@ -229,7 +229,7 @@ def check_global(report: Report, home: Path):
             report.ok(f"Codex routes reviews to cstack ({target.name})")
         else:
             report.todo(f"no routing block in {target}", "Rerun install.py --global.")
-    report.skip("Cursor user rules", "stored in Cursor settings; paste the routing text from templates/routing.md")
+    report.skip("Cursor user rules", "stored in Cursor settings; paste the routing text from https://raw.githubusercontent.com/yulmucoffee/cstack/main/templates/routing.md")
 
 
 def main() -> int:

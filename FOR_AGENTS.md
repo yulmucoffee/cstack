@@ -66,7 +66,7 @@ Add `--no-gate` for project-without-gate. Add `--hosts claude`, `--hosts codex` 
 
 If the installer reports conflicts, stop. Show the listed files and ask whether to keep their versions or overwrite with `--force`. It never overwrites `policy.json`, `bugbot.yaml`, `REVIEW.md` or an existing PR template.
 
-For the Claude Code plugin route, no files are written. The user runs `/plugin marketplace add yulmucoffee/cstack` and `/plugin install cstack@cstack`. A plugin cannot edit `CLAUDE.md`, so append the text of `templates/routing.md` to `~/.claude/CLAUDE.md` with the user's OK.
+For the Claude Code plugin route, no files are written. The user runs `/plugin marketplace add yulmucoffee/cstack` and `/plugin install cstack@cstack`. A plugin cannot edit `CLAUDE.md`, so append the text of https://raw.githubusercontent.com/yulmucoffee/cstack/main/templates/routing.md to `~/.claude/CLAUDE.md` with the user's OK.
 
 **Personal scope is done here.** Go to step 7.
 
