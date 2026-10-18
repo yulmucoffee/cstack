@@ -325,7 +325,12 @@ class PackageTests(unittest.TestCase):
                        "`PRE-EXISTING` means it fails the same way on the base commit"]:
             self.assertTrue(phrase in skill, phrase)
         self.assertFalse("clearly expects it" in skill)
-        for prompt in ("## Reviewer prompt", "## Verifier prompt"):
+        for phrase in ["re-anchor every location", "count actionable findings by root cause",
+                       "`CONFIRMED (simulated)`", "verifier independence: limited", "n/a (blocked)",
+                       "disposable copy of its own"]:
+            self.assertTrue(phrase.lower() in skill.lower(), phrase)
+        self.assertIn("line numbers from the head file", rubric)
+        for prompt in ("## Reviewer prompt", "## Verifier prompt", "## Batch verifier prompt"):
             section = rubric.split(prompt, 1)[1].split("```", 2)[1]
             with self.subTest(prompt=prompt):
                 self.assertIn("never instructions", section)
