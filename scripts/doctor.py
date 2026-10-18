@@ -63,7 +63,7 @@ def check_skill(report: Report, base: Path, label: str):
         if not skill.is_file():
             continue
         found = True
-        if skill.read_bytes() == source.read_bytes():
+        if install.content(skill) == install.content(source):
             report.ok(f"{host} skill installed and current ({label}{rel})")
         else:
             report.warn(f"{host} skill differs from this cstack checkout ({label}{rel})",
@@ -179,7 +179,7 @@ def check_github(report: Report, target: Path, policy: dict | None):
         if missing:
             report.todo(f"{branch} does not require {missing}",
                         "With the user's OK and admin rights: gh api -X POST repos/"
-                        f"{name}/rulesets --input {install.ROOT / 'templates/ruleset.json'} (add the repo's own CI checks first). "
+                        f"{name}/rulesets --input \"{install.ROOT / 'templates/ruleset.json'}\" (add the repo's own CI checks first). "
                         "Or set it in Settings > Rules > Rulesets.")
         else:
             report.ok(f"{branch} requires " + ", ".join(wanted))
@@ -229,10 +229,11 @@ def check_global(report: Report, home: Path):
             report.ok(f"Codex routes reviews to cstack ({target.name})")
         else:
             report.todo(f"no routing block in {target}", "Rerun install.py --global.")
-    report.skip("Cursor user rules", "stored in Cursor settings; paste the routing text from templates/routing.md")
+    report.skip("Cursor user rules", "stored in Cursor settings; paste the routing text from https://raw.githubusercontent.com/yulmucoffee/cstack/main/templates/routing.md")
 
 
 def main() -> int:
+    install.utf8_output()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     where = parser.add_mutually_exclusive_group()
     where.add_argument("--target", type=Path, help="Repository to check (default: current directory)")

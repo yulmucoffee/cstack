@@ -68,18 +68,18 @@ cstack은 이 둘을 1분이면 설치하는 파일로 묶었습니다.
 
 ## 빠른 시작
 
-Python 3.10 이상과 `git`이 필요합니다.
+Python 3.10 이상과 `git`이 필요합니다. 명령은 bash, zsh, PowerShell에서 그대로 동작합니다. Windows에서는 `python3` 대신 `py -3`를 쓰세요.
 
 **방법 A: 에이전트에게 맡기기.** 위 박스의 문장을 그대로 쓰세요. 에이전트가 [FOR_AGENTS.md](FOR_AGENTS.md)를 따라 진행합니다.
 
 **방법 B: 나만, 모든 레포에서**
 
 ```bash
-git clone --depth 1 https://github.com/yulmucoffee/cstack.git ~/.cstack/src
+git clone --depth 1 https://github.com/yulmucoffee/cstack.git "$HOME/.cstack/src"
 ```
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --global
+python3 "$HOME/.cstack/src/scripts/install.py" --global
 ```
 
 이걸로 끝입니다. 에이전트 세션을 새로 열고 "내 변경사항 리뷰해줘"라고 해 보세요.
@@ -87,11 +87,11 @@ python3 ~/.cstack/src/scripts/install.py --global
 **방법 C: 팀 레포에 적용**
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/install.py" --target /path/to/repo
 ```
 
 ```bash
-python3 ~/.cstack/src/scripts/doctor.py --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/doctor.py" --target /path/to/repo
 ```
 
 doctor가 무엇이 준비됐고 무엇이 남았는지 보여 줍니다. 결과를 커밋한 뒤 [강제 적용 켜기](#강제-적용-켜기)를 보세요.
@@ -218,7 +218,7 @@ flowchart LR
 - [ ] **게이트를 보호하세요.** `.github/workflows/`, `.cstack/`, `.cursor/`에 CODEOWNERS를 걸고 코드 오너 리뷰를 필수로 하세요. 그러지 않으면 PR이 게이트 워크플로 자체를 고칠 수 있습니다.
 
 ```bash
-gh api -X POST repos/OWNER/REPO/rulesets --input ~/.cstack/src/templates/ruleset.json
+gh api -X POST repos/OWNER/REPO/rulesets --input "$HOME/.cstack/src/templates/ruleset.json"
 ```
 
 > [!IMPORTANT]
@@ -272,11 +272,11 @@ gh api -X POST repos/OWNER/REPO/rulesets --input ~/.cstack/src/templates/ruleset
 <summary><b>업그레이드</b></summary>
 
 ```bash
-git -C ~/.cstack/src pull --ff-only
+git -C "$HOME/.cstack/src" pull --ff-only
 ```
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/install.py" --target /path/to/repo
 ```
 
 수정하지 않은 파일은 자동으로 업그레이드되고, 수정한 파일은 충돌로 알려 줍니다. 시드 파일은 여러분 소유라 갱신되지 않으니, 새 키가 생겼는지 `templates/policy.json`과 비교하세요.

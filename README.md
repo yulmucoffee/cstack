@@ -68,18 +68,18 @@ An optional GitHub check sets the number of human approvals a PR needs: 0 for do
 
 ## Quick start
 
-You need Python 3.10 or later and `git`.
+You need Python 3.10 or later and `git`. The commands work in bash, zsh and PowerShell. On Windows, use `py -3` where it says `python3`.
 
 **Option A: let your agent do it.** Use the prompt in the box above. The agent follows [FOR_AGENTS.md](FOR_AGENTS.md).
 
 **Option B: just for me, in every repository**
 
 ```bash
-git clone --depth 1 https://github.com/yulmucoffee/cstack.git ~/.cstack/src
+git clone --depth 1 https://github.com/yulmucoffee/cstack.git "$HOME/.cstack/src"
 ```
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --global
+python3 "$HOME/.cstack/src/scripts/install.py" --global
 ```
 
 That's it. Open a new agent session and say "review my changes".
@@ -87,11 +87,11 @@ That's it. Open a new agent session and say "review my changes".
 **Option C: for my team's repository**
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/install.py" --target /path/to/repo
 ```
 
 ```bash
-python3 ~/.cstack/src/scripts/doctor.py --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/doctor.py" --target /path/to/repo
 ```
 
 The doctor shows what is set up and what is left. Commit the result, then see [Turn on enforcement](#turn-on-enforcement).
@@ -218,7 +218,7 @@ The skill works right after install. The merge gate enforces nothing until GitHu
 - [ ] **Protect the gate.** Add CODEOWNERS for `.github/workflows/`, `.cstack/` and `.cursor/`, and require code-owner review. Without it, a PR could edit the gate's own workflow.
 
 ```bash
-gh api -X POST repos/OWNER/REPO/rulesets --input ~/.cstack/src/templates/ruleset.json
+gh api -X POST repos/OWNER/REPO/rulesets --input "$HOME/.cstack/src/templates/ruleset.json"
 ```
 
 > [!IMPORTANT]
@@ -272,11 +272,11 @@ A `CLAUDE.md` that only imports `@AGENTS.md` is left alone. An existing PR templ
 <summary><b>Upgrading</b></summary>
 
 ```bash
-git -C ~/.cstack/src pull --ff-only
+git -C "$HOME/.cstack/src" pull --ff-only
 ```
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/install.py" --target /path/to/repo
 ```
 
 Files you have not edited upgrade automatically. Edited ones are reported as conflicts. Seed files stay yours, so compare them with `templates/policy.json` for new keys.
