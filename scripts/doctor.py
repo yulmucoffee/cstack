@@ -48,7 +48,8 @@ class Report:
 
 def run(cmd: list[str], cwd: Path) -> tuple[int, str]:
     try:
-        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=30)
+        p = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=30)
     except (OSError, subprocess.TimeoutExpired) as e:
         return 1, str(e)
     return p.returncode, p.stdout.strip() or p.stderr.strip()

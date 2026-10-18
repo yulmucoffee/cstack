@@ -76,6 +76,16 @@ def merged_block(previous: str, body: str, path: Path) -> str:
     return previous.rstrip() + ("\n\n" if previous.strip() else "") + block + "\n"
 
 
+def read_untranslated(path: Path) -> str:
+    """Read without newline translation, so a merged file keeps its own line endings.
+
+    A text-mode round trip rewrote every line ending: whole LF files became CRLF on
+    Windows, and CRLF files became LF elsewhere, so the full file showed as changed.
+    """
+    with path.open(encoding="utf-8", newline="") as f:
+        return f.read()
+
+
 def imports_agents_md(claude_md: Path) -> bool:
     if not claude_md.is_file():
         return False
@@ -145,8 +155,10 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
             conflicts.append(rel)
     block_updates: list[tuple[Path, str]] = []
     for path, body in block_files(target, hosts, skill_only, routing).items():
-        previous = path.read_text(encoding="utf-8") if path.exists() else ""
-        updated = merged_block(previous, body, path)
+        previous = read_untranslated(path) if path.exists() else ""
+        updated = merged_block(previous.replace("\r\n", "\n"), body, path)
+        if "\r\n" in previous:
+            updated = updated.replace("\n", "\r\n")
         if updated != previous:
             block_updates.append((path, updated))
     if conflicts:
@@ -183,7 +195,7 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
         log.append(f"MERGE  {path}")
         if not dry_run:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(updated, encoding="utf-8")
+            path.write_text(updated, encoding="utf-8", newline="")
 
     files = {rel: d for rel, d in recorded.items() if rel not in removals and (target / rel).exists()}
     files.update({rel: sha256(src) for rel, src in plan.items()})
