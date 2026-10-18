@@ -233,6 +233,11 @@ class PackageTests(unittest.TestCase):
         self.assertLessEqual(len(fields["description"]), 1024)
         self.assertLess(len(text.splitlines()), 500)
 
+    def test_solo_review_only_for_docs_only_changes(self):
+        text = (ROOT / "skills/cstack/SKILL.md").read_text()
+        self.assertIn("A short diff is not an exception.", text)
+        self.assertIn("independence: limited (docs-only)", text)
+
     def test_skill_references_exist(self):
         text = (ROOT / "skills/cstack/SKILL.md").read_text()
         for ref in set(re.findall(r"`(references/[\w-]+\.md)`", text)):

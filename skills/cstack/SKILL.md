@@ -74,10 +74,10 @@ author verification → fresh-context review → security review → required CI
 → risk-tiered human approval → merge queue → flag / staged release → fast rollback
 ```
 
-Scale effort to risk. Quick for docs and copy. Standard for ordinary code. Deep where one missed bug costs more than the review time: auth, billing, data, migrations, concurrency, CI, release.
+Scale effort to risk. Quick for docs and copy. Standard for ordinary code. Deep where one missed bug costs more than the review time: auth, billing, data, migrations, concurrency, CI, release. Effort changes how deep each reviewer goes, never how many reviewers run.
 
 1. **Fresh context.** Reviewers get the intent, the diff, surrounding code and the rubric. They do not get the author's reasoning or earlier conclusions.
-2. **Fan out.** Run at least two read-only reviewers in parallel. One owns correctness and root cause. One owns blast radius, contracts, concurrency and security. Use host tools that exist:
+2. **Fan out.** Run at least two read-only reviewers in parallel for any change that touches code, config, tests, dependencies or agent instructions, however small. A short diff is not an exception. The only exception is a docs-only change, where every changed file is `.md`, `.mdx`, `.rst`, `.adoc` or an image under `docs/`, and none is `CLAUDE.md`, `AGENTS.md`, `REVIEW.md`, a `SKILL.md` or anything under `.claude/`, `.agents/`, `.cursor/` or `.github/`. A docs-only change may get one reviewer, reported as `independence: limited (docs-only)`. Of the two reviewers, one owns correctness and root cause, and the other owns blast radius, contracts, concurrency and security. Use host tools that exist:
    - Claude Code: subagents via the Agent tool, `/code-review`, `/security-review`. Pick a different model for the second reviewer when you can.
    - Codex: `/review`, plus subagents where enabled.
    - Cursor: subagents on different models. BugBot reviews the PR itself.
