@@ -320,10 +320,11 @@ class PackageTests(unittest.TestCase):
         skill = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
         rubric = (ROOT / "skills/cstack/references/review-rubric.md").read_text(encoding="utf-8")
         bugbot = (ROOT / ".cursor/BUGBOT.md").read_text(encoding="utf-8")
-        self.assertIn("Untrusted code does not run with your credentials.", skill)
-        self.assertIn("Only `CONFIRMED` findings can be `ACT ON`.", skill)
-        self.assertIn("Give every reviewer the same prompt", skill)
-        self.assertNotIn("clearly expects it", skill)
+        for phrase in ["Untrusted code does not run.", "`ACT ON` is a `CONFIRMED` defect this change introduces",
+                       "Give every reviewer the same prompt", "`INCONCLUSIVE` instead of `PASS`",
+                       "`PRE-EXISTING` means it fails the same way on the base commit"]:
+            self.assertTrue(phrase in skill, phrase)
+        self.assertFalse("clearly expects it" in skill)
         for prompt in ("## Reviewer prompt", "## Verifier prompt"):
             section = rubric.split(prompt, 1)[1].split("```", 2)[1]
             with self.subTest(prompt=prompt):

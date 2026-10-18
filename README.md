@@ -133,7 +133,7 @@ FINDINGS: 2 actionable
 DECLINED: percent coupons treated as flat: the change only adds flat coupons
 PROOF: python3 repro.py -> both reproduced on the branch, absent on main
 SAFETY FACT: callers without a coupon are unaffected: PROVED (ran both branches)
-REVIEWERS: A=Sonnet, B=Opus | both found #1 and #2
+REVIEWERS: A=Anthropic/Sonnet, B=Anthropic/Opus, both found #1 and #2 | independence: same-vendor
 NEXT: clamp at zero, validate the amount, add the four missing tests
 ```
 
@@ -186,9 +186,9 @@ flowchart LR
 **What the skill insists on**
 
 - **Proof, not claims.** Every claim carries its evidence or is labeled `measured`, `inferred` or `guess`.
-- **Two reviewers for anything but docs.** Same prompt, different models. A short diff is not an exception. Over about 800 changed lines, the diff is split and each part gets its own pair.
-- **A fresh verifier for every finding.** Only `CONFIRMED` findings can block. The lead cannot overrule a confirmed correctness or security finding, and lists everything it set aside.
-- **Untrusted code is not run.** Tests and builds from forks or outside authors run only with your approval. Otherwise the review traces the code instead.
+- **Two reviewers for anything but docs.** Same prompt, different models. A short diff is not an exception. Over about 800 changed lines, each reviewer goes through the diff in passes, one part at a time.
+- **A fresh verifier for every finding.** Only `CONFIRMED` findings of medium severity or above can block, and an unproven high-severity finding makes the verdict `INCONCLUSIVE`, never `PASS`. The lead cannot overrule a confirmed correctness or security finding, and lists everything it set aside.
+- **Untrusted code is not run.** Tests and builds from forks or authors without write access run only with your approval, and never with your secrets. Otherwise the review traces the code instead.
 - **Rules where they apply.** `CLAUDE.md`, `AGENTS.md` and `REVIEW.md` are read from the base branch in every directory the PR touches, and a convention finding quotes its rule.
 - **One safety fact.** It finds the single fact the change is safe because of and proves it by running code, or says `UNPROVEN`.
 - **Reviews converge.** At most three rounds on one problem. After the first pass it re-reviews only the new diff, names the bug class, and never repeats a finding.

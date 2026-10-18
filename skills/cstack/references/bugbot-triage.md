@@ -1,12 +1,12 @@
 # BugBot and review-bot triage
 
-Bots catch real bugs and also file non-issues. The goal is to stop treating every comment as a required code change, not to ignore the bot. This page is for bots and automated reviewers. For a human reviewer's thread, reply with the fix commit or your reasoning, and leave resolving it to them.
+Bots catch real bugs and also file non-issues. The goal is to stop treating every comment as a required code change, not to ignore the bot. This page is for bots and automated reviewers. For a human reviewer's thread, or a bot thread a human has replied in, reply with the fix commit or your reasoning, and leave resolving it to them. If a human's request is unclear or conflicts with what the user decided, stop and ask the user before changing anything.
 
 ## Decide per thread
 
 - `fix`: you reproduced or traced the issue, and the fix is local and keeps the PR's intended behavior. This includes security, privacy, auth, billing and data issues when both hold; say so in the reply so the owner sees it. Fix it in the lowest PR that owns the code, reply with the commit SHA, resolve the thread.
 - `dismiss`: the current code disproves it, or it matches a pattern below at `recurring` or `strong` confidence. Never dismiss anything on the ask-by-default list. Reply with the concrete disproof and resolve.
-- `ask`: novel and unconfirmed, high severity, or the fix would change intended behavior. Ask the owner instead of guessing.
+- `ask`: unconfirmed and high severity or on the list below, or the fix would change intended behavior. Ask the owner instead of guessing. A confirmed issue with a local fix that keeps intent is `fix`, whatever its severity.
 
 When unsure, ask. Skipping a noisy style comment is cheap. Skipping a real data or security bug is not.
 
@@ -14,6 +14,7 @@ When unsure, ask. Skipping a noisy style comment is cheap. Skipping a real data 
 
 - If the claim can be checked with one command (a contract test, a type check, a grep on the tip), run it before classifying. A red run confirms the claim. A green run is the disproof for the reply.
 - A finding about a missing check may be stale. Confirm against the current head, not the commit the bot reviewed.
+- Findings against hand-rolled replacements of native platform behavior (scrolling, sticky positioning, focus, event forwarding) are usually real. Default to verifying and fixing them.
 
 ## Ask by default
 
@@ -74,10 +75,3 @@ These start at `candidate` confidence. Use them to look closer, not to dismiss. 
 - Skip when: the bot asks to widen a specific error check (an errno, status class or error code) into a catch-all, and the narrow check encodes a real distinction, such as "binary missing" versus "command failed".
 - Do not skip when: the narrow check misses a case in the same category, or the unhandled path loses data or leaves partial state.
 - Example signal: "only falls back on ENOENT".
-
-### Manual reimplementation of native platform behavior
-
-- Confidence: candidate
-- Skip when: practically never. Bot findings against hand-rolled scrolling, sticky positioning, focus management or event forwarding are usually real.
-- Do not skip when: always default to `fix`.
-- Example signal: "overlay blocks wheel scroll", "ignores deltaMode".

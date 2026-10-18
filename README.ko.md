@@ -133,7 +133,7 @@ FINDINGS: 2 actionable
 DECLINED: percent coupons treated as flat: the change only adds flat coupons
 PROOF: python3 repro.py -> both reproduced on the branch, absent on main
 SAFETY FACT: callers without a coupon are unaffected: PROVED (ran both branches)
-REVIEWERS: A=Sonnet, B=Opus | both found #1 and #2
+REVIEWERS: A=Anthropic/Sonnet, B=Anthropic/Opus, both found #1 and #2 | independence: same-vendor
 NEXT: clamp at zero, validate the amount, add the four missing tests
 ```
 
@@ -186,9 +186,9 @@ flowchart LR
 **스킬이 반드시 지키는 것**
 
 - **주장이 아니라 증거.** 모든 주장에 증거를 붙이거나 `measured`, `inferred`, `guess`로 표시합니다.
-- **문서가 아니면 리뷰어 2명.** 같은 프롬프트, 다른 모델입니다. 짧은 diff도 예외가 아닙니다. 바뀐 줄이 800줄쯤을 넘으면 diff를 나눠 부분마다 2명씩 붙입니다.
-- **지적마다 새 검증 에이전트.** `CONFIRMED`된 지적만 머지를 막을 수 있습니다. 리드는 확인된 정확성·보안 지적을 뒤집을 수 없고, 뺀 지적은 이유와 함께 모두 보고합니다.
-- **신뢰할 수 없는 코드는 실행하지 않습니다.** fork나 외부 작성자의 테스트와 빌드는 허락할 때만 돌리고, 그 외에는 코드를 읽고 추적해서 검토합니다.
+- **문서가 아니면 리뷰어 2명.** 같은 프롬프트, 다른 모델입니다. 짧은 diff도 예외가 아닙니다. 바뀐 줄이 800줄쯤을 넘으면 각 리뷰어가 diff를 부분별로 나눠 차례로 봅니다.
+- **지적마다 새 검증 에이전트.** `CONFIRMED`된 중간 심각도 이상의 지적만 머지를 막을 수 있습니다. 증명되지 않은 고심각도 지적이 있으면 판정은 `PASS`가 아니라 `INCONCLUSIVE`입니다. 리드는 확인된 정확성·보안 지적을 뒤집을 수 없고, 뺀 지적은 이유와 함께 모두 보고합니다.
+- **신뢰할 수 없는 코드는 실행하지 않습니다.** fork나 쓰기 권한이 없는 작성자의 테스트와 빌드는 허락할 때만, 그리고 비밀 정보 없이 돌립니다. 그 외에는 코드를 읽고 추적해서 검토합니다.
 - **규칙은 해당하는 곳에만.** `CLAUDE.md`, `AGENTS.md`, `REVIEW.md`를 base 브랜치에서, PR이 건드린 모든 폴더에 대해 읽습니다. 컨벤션 지적에는 해당 규칙 원문을 인용합니다.
 - **안전의 단 하나의 근거.** 변경이 안전한 단 하나의 사실을 찾아 코드를 실행해서 증명합니다. 증명하지 못하면 `UNPROVEN`이라고 씁니다.
 - **리뷰는 수렴합니다.** 같은 문제로는 최대 세 번까지만 돕니다. 첫 패스 이후에는 새 diff만 보고, 버그 유형을 짚고, 같은 지적을 반복하지 않습니다.

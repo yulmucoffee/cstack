@@ -4,7 +4,7 @@
 
 ## Babysit
 
-1. **Declare the sub-mode.** `drive` (loop to merge-ready), `threads-only` (answer threads, fix only what a thread needs, leave CI and conflicts alone) or `check` (one read-only status pass). With no sub-mode named, use `drive`, or `check` for small and docs-only PRs. A sub-mode the user names always wins.
+1. **Declare the sub-mode.** `drive` (loop to merge-ready), `threads-only` (answer threads, fix only what a thread needs, leave CI and conflicts alone) or `check` (one read-only status pass). With no sub-mode named: "address the comments" is `threads-only`, "check on" or "is it green" is `check`, and anything else is `drive`, except `check` for docs-only PRs. A sub-mode the user names always wins.
 2. **One babysitter per stack.** Check nothing else is already driving it.
 3. **Find the frontier.** The lowest unmerged PR in the dependency chain is the only one that matters until it merges. Read upstack threads and batch them. Do not fix upstack at the cost of restarting the frontier's checks.
 4. **Read forge truth.** `gh pr view <n> --json state,isDraft,mergeable,mergeStateStatus,reviewDecision,headRefOid,baseRefName` and `gh pr checks <n>`. For threads, query `reviewThreads { isResolved }` through `gh api graphql`. Trust the forge's merge state over a list of green checks.
