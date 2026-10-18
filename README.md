@@ -68,7 +68,7 @@ An optional GitHub check sets the number of human approvals a PR needs: 0 for do
 
 ## Quick start
 
-You need Python 3.10 or later and `git`.
+You need Python 3.10 or later and `git`. On Windows, use `py -3` where it says `python3`, and `$HOME` where it says `~` in PowerShell.
 
 **Option A: let your agent do it.** Use the prompt in the box above. The agent follows [FOR_AGENTS.md](FOR_AGENTS.md).
 

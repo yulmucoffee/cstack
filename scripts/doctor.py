@@ -63,7 +63,7 @@ def check_skill(report: Report, base: Path, label: str):
         if not skill.is_file():
             continue
         found = True
-        if skill.read_bytes() == source.read_bytes():
+        if install.content(skill) == install.content(source):
             report.ok(f"{host} skill installed and current ({label}{rel})")
         else:
             report.warn(f"{host} skill differs from this cstack checkout ({label}{rel})",
@@ -233,6 +233,7 @@ def check_global(report: Report, home: Path):
 
 
 def main() -> int:
+    install.utf8_output()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     where = parser.add_mutually_exclusive_group()
     where.add_argument("--target", type=Path, help="Repository to check (default: current directory)")

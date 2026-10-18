@@ -68,7 +68,7 @@ cstack은 이 둘을 1분이면 설치하는 파일로 묶었습니다.
 
 ## 빠른 시작
 
-Python 3.10 이상과 `git`이 필요합니다.
+Python 3.10 이상과 `git`이 필요합니다. Windows에서는 `python3` 대신 `py -3`를, PowerShell에서는 `~` 대신 `$HOME`을 쓰세요.
 
 **방법 A: 에이전트에게 맡기기.** 위 박스의 문장을 그대로 쓰세요. 에이전트가 [FOR_AGENTS.md](FOR_AGENTS.md)를 따라 진행합니다.
 

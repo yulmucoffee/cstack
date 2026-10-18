@@ -33,10 +33,16 @@ If you are inside a git repository and the user said "set this up" without more,
 Use a stable location so later upgrades are a `git pull`:
 
 ```bash
-git clone --depth 1 https://github.com/yulmucoffee/cstack.git ~/.cstack/src || git -C ~/.cstack/src pull --ff-only
+git clone --depth 1 https://github.com/yulmucoffee/cstack.git "$HOME/.cstack/src"
 ```
 
-Needs Python 3.10 or later. On Windows, run the commands below with `py -3` or `python` instead of `python3`, which there is often the Microsoft Store stub. The scripts use only the standard library and make no network calls, except that `doctor.py` uses `gh` when it is available.
+If it already exists, update it instead:
+
+```bash
+git -C "$HOME/.cstack/src" pull --ff-only
+```
+
+Needs Python 3.10 or later. The commands use `$HOME`, which works in bash, zsh and PowerShell. On Windows, use PowerShell or Git Bash, and run `py -3` (or `python`) wherever a step says `python3`, because `python3` there is often only the Microsoft Store stub. The scripts use only the standard library and make no network calls, except that `doctor.py` uses `gh` when it is available.
 
 ## Step 3. Install
 
@@ -45,15 +51,15 @@ Always do a dry run first and show the user the list of files.
 **Personal:**
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --global --dry-run
-python3 ~/.cstack/src/scripts/install.py --global
+python3 "$HOME/.cstack/src/scripts/install.py" --global --dry-run
+python3 "$HOME/.cstack/src/scripts/install.py" --global
 ```
 
 **Project** (replace the path with the repository root):
 
 ```bash
-python3 ~/.cstack/src/scripts/install.py --target /path/to/repo --dry-run
-python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/install.py" --target /path/to/repo --dry-run
+python3 "$HOME/.cstack/src/scripts/install.py" --target /path/to/repo
 ```
 
 Add `--no-gate` for project-without-gate. Add `--hosts claude`, `--hosts codex` or `--hosts claude,codex,cursor` if the user uses only some tools. The default, `claude,codex`, also covers Cursor.
@@ -84,7 +90,7 @@ These steps need the user or an admin. Present them as a checklist, and do each 
 2. **Ruleset.** `templates/ruleset.json` requires `cstack-risk-gate` and `Cursor Bugbot` from their real GitHub Apps. It also blocks force-pushes and deletion, dismisses stale approvals and requires conversation resolution. First add the repository's own CI check names to `required_status_checks`. With the user's yes and admin rights:
 
    ```bash
-   gh api -X POST repos/OWNER/REPO/rulesets --input ~/.cstack/src/templates/ruleset.json
+   gh api -X POST repos/OWNER/REPO/rulesets --input "$HOME/.cstack/src/templates/ruleset.json"
    ```
 
    Show the user the API response. If it fails, report the error and give the manual path: Settings > Rules > Rulesets.
@@ -93,8 +99,8 @@ These steps need the user or an admin. Present them as a checklist, and do each 
 ## Step 7. Verify and report
 
 ```bash
-python3 ~/.cstack/src/scripts/doctor.py --target /path/to/repo
-python3 ~/.cstack/src/scripts/doctor.py --global
+python3 "$HOME/.cstack/src/scripts/doctor.py" --target /path/to/repo
+python3 "$HOME/.cstack/src/scripts/doctor.py" --global
 ```
 
 It exits 1 while any `[todo]` remains. Report to the user:
@@ -107,8 +113,8 @@ Then tell the user to start a new agent session, so the skill and routing load.
 ## Upgrading later
 
 ```bash
-git -C ~/.cstack/src pull --ff-only
-python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+git -C "$HOME/.cstack/src" pull --ff-only
+python3 "$HOME/.cstack/src/scripts/install.py" --target /path/to/repo
 ```
 
-Unmodified files upgrade automatically. Edited ones are reported as conflicts. Compare `~/.cstack/src/templates/policy.json` with the repository's copy for new keys.
+Unmodified files upgrade automatically. Edited ones are reported as conflicts. Compare `$HOME/.cstack/src/templates/policy.json` with the repository's copy for new keys.

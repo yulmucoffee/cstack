@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def doctor(*args, env=None):
     return subprocess.run([sys.executable, str(ROOT / "scripts/doctor.py"), *args, "--json"],
-                          capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+                          capture_output=True, text=True, encoding="utf-8", env=env)
 
 
 def install(target, *args):
     subprocess.run([sys.executable, str(ROOT / "scripts/install.py"), "--target", str(target), *args],
-                   capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                   capture_output=True, text=True, encoding="utf-8", check=True)
 
 
 def statuses(result):
@@ -67,6 +67,13 @@ class DoctorTests(unittest.TestCase):
         (self.target / ".cstack/policy.json").write_text('{"trusted_authors": 1}')
         found = statuses(doctor("--target", str(self.target), "--no-github"))
         self.assertEqual(found["policy.json is invalid"], "todo")
+
+    def test_json_output_is_utf8_even_on_a_legacy_code_page_pipe(self):
+        target = self.target / "한글 프로젝트 😀"
+        target.mkdir()
+        env = dict(os.environ, PYTHONIOENCODING="cp1252")
+        result = doctor("--target", str(target), "--no-github", env=env)
+        self.assertEqual(json.loads(result.stdout)["place"], str(target.resolve()), result.stderr)
 
     def test_global_checks_only_tools_present(self):
         home = self.target / "home"

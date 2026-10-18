@@ -48,8 +48,22 @@ PR_TEMPLATE_LOCATIONS = [
 ]
 
 
+def content(path: Path) -> bytes:
+    """File bytes with CRLF folded to LF, so a Windows checkout (core.autocrlf) of an
+    unmodified file still counts as unmodified."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashlib.sha256(content(path)).hexdigest()
+
+
+def utf8_output():
+    """Print UTF-8 even when stdout is a pipe on Windows (cp949, cp1252), so non-ASCII
+    paths neither crash a finished install nor reach the reader garbled."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 def managed_plan(hosts: list[str], skill_only: bool, gate: bool) -> dict[str, Path]:
@@ -63,9 +77,16 @@ def managed_plan(hosts: list[str], skill_only: bool, gate: bool) -> dict[str, Pa
     return plan
 
 
-def merged_block(previous: str, body: str, path: Path) -> str:
-    """Insert or replace the one marked cstack block, leaving the rest of the file alone."""
-    block = f"{MARKER_START}\n{body.rstrip()}\n{MARKER_END}"
+def line_ending(text: str) -> str:
+    crlf = text.count("\r\n")
+    return "\r\n" if crlf > text.count("\n") - crlf else "\n"
+
+
+def merged_block(previous: str, body: str, path: Path, eol: str = "\n") -> str:
+    """Insert or replace the one marked cstack block, leaving the rest of the file byte-for-byte.
+
+    Only the block itself is written in `eol`, the file's dominant line ending."""
+    block = eol.join([MARKER_START, *body.rstrip().split("\n"), MARKER_END])
     starts, ends = previous.count(MARKER_START), previous.count(MARKER_END)
     if starts != ends or starts > 1 or (starts and previous.index(MARKER_END) < previous.index(MARKER_START)):
         raise ValueError(f"{path} has malformed cstack markers; fix or remove the cstack block and rerun")
@@ -73,15 +94,11 @@ def merged_block(previous: str, body: str, path: Path) -> str:
         before, tail = previous.split(MARKER_START, 1)
         _, after = tail.split(MARKER_END, 1)
         return before + block + after
-    return previous.rstrip() + ("\n\n" if previous.strip() else "") + block + "\n"
+    return previous.rstrip() + (eol * 2 if previous.strip() else "") + block + eol
 
 
 def read_untranslated(path: Path) -> str:
-    """Read without newline translation, so a merged file keeps its own line endings.
-
-    A text-mode round trip rewrote every line ending: whole LF files became CRLF on
-    Windows, and CRLF files became LF elsewhere, so the full file showed as changed.
-    """
+    """Read without newline translation, so a merged file keeps its own line endings."""
     with path.open(encoding="utf-8", newline="") as f:
         return f.read()
 
@@ -147,7 +164,7 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
         dst = target / rel
         if not dst.exists():
             writes.append((src, dst))
-        elif dst.read_bytes() == src.read_bytes():
+        elif content(dst) == content(src):
             continue
         elif force or recorded.get(rel) == sha256(dst):
             writes.append((src, dst))
@@ -156,9 +173,7 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
     block_updates: list[tuple[Path, str]] = []
     for path, body in block_files(target, hosts, skill_only, routing).items():
         previous = read_untranslated(path) if path.exists() else ""
-        updated = merged_block(previous.replace("\r\n", "\n"), body, path)
-        if "\r\n" in previous:
-            updated = updated.replace("\n", "\r\n")
+        updated = merged_block(previous, body, path, line_ending(previous))
         if updated != previous:
             block_updates.append((path, updated))
     if conflicts:
@@ -206,6 +221,7 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
 
 
 def main() -> int:
+    utf8_output()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     where = parser.add_mutually_exclusive_group()
     where.add_argument("--target", type=Path, help="Project repository to install into (default: current directory)")

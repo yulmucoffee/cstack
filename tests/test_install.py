@@ -14,9 +14,9 @@ installer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(installer)
 
 
-def run(*args):
+def run(*args, env=None):
     return subprocess.run([sys.executable, str(ROOT / "scripts/install.py"), *args], capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
+                          encoding="utf-8", env=env)
 
 
 class InstallTests(unittest.TestCase):
@@ -188,17 +188,43 @@ class RoutingTests(unittest.TestCase):
         run("--target", str(self.target), "--no-gate")
         self.assertEqual((self.target / "AGENTS.md").read_text(encoding="utf-8").count("cstack:begin"), 1)
 
-    def test_merged_routing_block_keeps_line_endings(self):
-        for eol in ("\n", "\r\n"):
-            with self.subTest(eol=repr(eol)), tempfile.TemporaryDirectory() as d:
+    def test_merged_routing_block_keeps_the_rest_of_the_file_byte_for_byte(self):
+        cases = {
+            "lf": (b"# Shared\n\nUse tabs.\n", b"\n"),
+            "crlf": (b"# Shared\r\n\r\nUse tabs.\r\n", b"\r\n"),
+            "mostly lf, one crlf line": (b"# A\n\nx\ny\nz\r\n", b"\n"),
+            "mostly crlf, one lf line": (b"# A\r\n\r\nx\r\ny\nz\r\n", b"\r\n"),
+        }
+        for name, (original, eol) in cases.items():
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as d:
                 target = Path(d)
-                original = f"# Shared{eol}{eol}Use tabs.{eol}".encode()
                 (target / "AGENTS.md").write_bytes(original)
-                run("--target", str(target), "--no-gate", "--hosts", "codex")
+                result = run("--target", str(target), "--no-gate", "--hosts", "codex")
+                self.assertEqual(result.returncode, 0, result.stderr)
                 data = (target / "AGENTS.md").read_bytes()
-                self.assertTrue(data.startswith(original))
-                lf_only = data.count(b"\n") - data.count(b"\r\n")
-                self.assertEqual(data.count(b"\r\n") if eol == "\n" else lf_only, 0)
+                self.assertTrue(data.startswith(original.rstrip()), data[:60])
+                block = data[data.index(b"<!-- cstack:begin -->"):]
+                if eol == b"\n":
+                    self.assertNotIn(b"\r", block)
+                else:
+                    self.assertEqual(block.count(b"\n"), block.count(b"\r\n"))
+                self.assertIn("0 changes", run("--target", str(target), "--no-gate", "--hosts", "codex").stdout)
+
+    def test_output_is_utf8_even_on_a_legacy_code_page_pipe(self):
+        target = self.target / "한글 프로젝트 😀"
+        target.mkdir()
+        result = run("--target", str(target), "--no-gate", env=dict(os.environ, PYTHONIOENCODING="cp1252"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("한글 프로젝트 😀", result.stdout)
+
+    def test_windows_checkout_of_installed_files_is_not_a_conflict(self):
+        run("--target", str(self.target), "--no-gate")
+        for f in (self.target / ".claude/skills/cstack").rglob("*"):
+            if f.is_file():
+                f.write_bytes(f.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+        again = run("--target", str(self.target), "--no-gate")
+        self.assertEqual(again.returncode, 0, again.stderr)
+        self.assertIn("0 changes", again.stdout)
 
     def test_hosts_pick_routing_files(self):
         run("--target", str(self.target), "--no-gate", "--hosts", "claude")
