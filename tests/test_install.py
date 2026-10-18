@@ -15,7 +15,8 @@ spec.loader.exec_module(installer)
 
 
 def run(*args):
-    return subprocess.run([sys.executable, str(ROOT / "scripts/install.py"), *args], capture_output=True, text=True)
+    return subprocess.run([sys.executable, str(ROOT / "scripts/install.py"), *args], capture_output=True, text=True,
+                          encoding="utf-8", errors="replace")
 
 
 class InstallTests(unittest.TestCase):
@@ -55,7 +56,7 @@ class InstallTests(unittest.TestCase):
         f.write_text("MY CUSTOM WORK")
         blocked = self.install()
         self.assertNotEqual(blocked.returncode, 0)
-        self.assertEqual(f.read_text(), "MY CUSTOM WORK")
+        self.assertEqual(f.read_text(encoding="utf-8"), "MY CUSTOM WORK")
         forced = self.install("--force")
         self.assertEqual(forced.returncode, 0, forced.stderr)
         self.assertEqual(f.read_bytes(), (ROOT / "skills/cstack/SKILL.md").read_bytes())
@@ -65,7 +66,7 @@ class InstallTests(unittest.TestCase):
         f = self.target / ".claude/skills/cstack/SKILL.md"
         f.write_text("cstack v0 as shipped")
         manifest = self.target / ".cstack/manifest.json"
-        data = json.loads(manifest.read_text())
+        data = json.loads(manifest.read_text(encoding="utf-8"))
         data["files"][".claude/skills/cstack/SKILL.md"] = installer.sha256(f)
         manifest.write_text(json.dumps(data))
         upgraded = self.install()
@@ -79,7 +80,7 @@ class InstallTests(unittest.TestCase):
         stale.write_text("old")
         edited.write_text("old but edited")
         manifest = self.target / ".cstack/manifest.json"
-        data = json.loads(manifest.read_text())
+        data = json.loads(manifest.read_text(encoding="utf-8"))
         data["files"][".claude/skills/cstack/references/old.md"] = installer.sha256(stale)
         data["files"][".claude/skills/cstack/references/older.md"] = "0" * 64
         manifest.write_text(json.dumps(data))
@@ -96,8 +97,8 @@ class InstallTests(unittest.TestCase):
         review.write_text("# ours\n")
         result = self.install("--force")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(policy.read_text(), '{"trusted_authors": ["me"]}')
-        self.assertEqual(review.read_text(), "# ours\n")
+        self.assertEqual(policy.read_text(encoding="utf-8"), '{"trusted_authors": ["me"]}')
+        self.assertEqual(review.read_text(encoding="utf-8"), "# ours\n")
 
     def test_existing_bugbot_config_is_kept(self):
         (self.target / ".cursor/config").mkdir(parents=True)
@@ -105,7 +106,7 @@ class InstallTests(unittest.TestCase):
         cfg.write_text("version: 1\ntriggers:\n  drafts: true\n")
         result = self.install()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(cfg.read_text(), "version: 1\ntriggers:\n  drafts: true\n")
+        self.assertEqual(cfg.read_text(encoding="utf-8"), "version: 1\ntriggers:\n  drafts: true\n")
 
     def test_malformed_bugbot_markers_fail_before_writing(self):
         (self.target / ".cursor").mkdir()
@@ -129,7 +130,7 @@ class InstallTests(unittest.TestCase):
         bugbot.write_text("# Existing rule\n\n<!-- cstack:begin -->\nold\n<!-- cstack:end -->\n\n# Tail rule\n")
         result = self.install("--no-gate")
         self.assertEqual(result.returncode, 0, result.stderr)
-        text = bugbot.read_text()
+        text = bugbot.read_text(encoding="utf-8")
         self.assertIn("# Existing rule", text)
         self.assertIn("# Tail rule", text)
         self.assertNotIn("\nold\n", text)
@@ -160,29 +161,44 @@ class RoutingTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def routed(self, path):
-        return path.is_file() and "use the `cstack` skill in `review` mode" in path.read_text()
+        return path.is_file() and "use the `cstack` skill in `review` mode" in path.read_text(encoding="utf-8")
 
     def test_project_install_routes_reviews_in_claude_and_agents_md(self):
         (self.target / "CLAUDE.md").write_text("# House rules\n\nUse tabs.\n")
         self.assertEqual(run("--target", str(self.target), "--no-gate").returncode, 0)
         self.assertTrue(self.routed(self.target / "CLAUDE.md"))
         self.assertTrue(self.routed(self.target / "AGENTS.md"))
-        self.assertIn("Use tabs.", (self.target / "CLAUDE.md").read_text())
+        self.assertIn("Use tabs.", (self.target / "CLAUDE.md").read_text(encoding="utf-8"))
         again = run("--target", str(self.target), "--no-gate")
         self.assertIn("0 changes", again.stdout)
-        self.assertEqual((self.target / "CLAUDE.md").read_text().count("cstack:begin"), 1)
+        self.assertEqual((self.target / "CLAUDE.md").read_text(encoding="utf-8").count("cstack:begin"), 1)
 
     def test_claude_md_that_imports_agents_md_is_left_alone(self):
         (self.target / "CLAUDE.md").write_text("@AGENTS.md\n")
         run("--target", str(self.target), "--no-gate")
-        self.assertEqual((self.target / "CLAUDE.md").read_text(), "@AGENTS.md\n")
+        self.assertEqual((self.target / "CLAUDE.md").read_text(encoding="utf-8"), "@AGENTS.md\n")
         self.assertTrue(self.routed(self.target / "AGENTS.md"))
 
     def test_symlinked_claude_md_gets_one_block(self):
         (self.target / "AGENTS.md").write_text("# Shared\n")
-        (self.target / "CLAUDE.md").symlink_to("AGENTS.md")
+        try:
+            (self.target / "CLAUDE.md").symlink_to("AGENTS.md")
+        except OSError as e:  # Windows without symlink privilege or developer mode
+            self.skipTest(f"symlinks unavailable: {e}")
         run("--target", str(self.target), "--no-gate")
-        self.assertEqual((self.target / "AGENTS.md").read_text().count("cstack:begin"), 1)
+        self.assertEqual((self.target / "AGENTS.md").read_text(encoding="utf-8").count("cstack:begin"), 1)
+
+    def test_merged_routing_block_keeps_line_endings(self):
+        for eol in ("\n", "\r\n"):
+            with self.subTest(eol=repr(eol)), tempfile.TemporaryDirectory() as d:
+                target = Path(d)
+                original = f"# Shared{eol}{eol}Use tabs.{eol}".encode()
+                (target / "AGENTS.md").write_bytes(original)
+                run("--target", str(target), "--no-gate", "--hosts", "codex")
+                data = (target / "AGENTS.md").read_bytes()
+                self.assertTrue(data.startswith(original))
+                lf_only = data.count(b"\n") - data.count(b"\r\n")
+                self.assertEqual(data.count(b"\r\n") if eol == "\n" else lf_only, 0)
 
     def test_hosts_pick_routing_files(self):
         run("--target", str(self.target), "--no-gate", "--hosts", "claude")
@@ -217,7 +233,7 @@ class RoutingTests(unittest.TestCase):
                 os.environ["CODEX_HOME"] = old
 
     def test_skill_description_claims_review_requests(self):
-        text = (ROOT / "skills/cstack/SKILL.md").read_text()
+        text = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
         description = text.split("description: ", 1)[1].split("\n", 1)[0]
         for phrase in ["review this PR", "code review", "코드 리뷰", "even when another review skill"]:
             self.assertIn(phrase, description)
@@ -225,7 +241,7 @@ class RoutingTests(unittest.TestCase):
 
 class PackageTests(unittest.TestCase):
     def test_skill_frontmatter(self):
-        text = (ROOT / "skills/cstack/SKILL.md").read_text()
+        text = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
         match = re.match(r"---\n(.*?)\n---\n", text, re.S)
         self.assertIsNotNone(match)
         fields = dict(line.split(": ", 1) for line in match.group(1).splitlines())
@@ -234,23 +250,23 @@ class PackageTests(unittest.TestCase):
         self.assertLess(len(text.splitlines()), 500)
 
     def test_solo_review_only_for_docs_only_changes(self):
-        text = (ROOT / "skills/cstack/SKILL.md").read_text()
+        text = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("A short diff is not an exception.", text)
         self.assertIn("independence: limited (docs-only)", text)
 
     def test_skill_references_exist(self):
-        text = (ROOT / "skills/cstack/SKILL.md").read_text()
+        text = (ROOT / "skills/cstack/SKILL.md").read_text(encoding="utf-8")
         for ref in set(re.findall(r"`(references/[\w-]+\.md)`", text)):
             self.assertTrue((ROOT / "skills/cstack" / ref).is_file(), ref)
 
     def test_plugin_manifests(self):
-        plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text())
-        market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text())
+        plugin = json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        market = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
         self.assertEqual(plugin["name"], "cstack")
         self.assertEqual(market["plugins"][0]["name"], plugin["name"])
 
     def test_gate_workflow_runs_base_branch_gate_only(self):
-        wf = (ROOT / "templates/workflows/cstack-gate.yml").read_text()
+        wf = (ROOT / "templates/workflows/cstack-gate.yml").read_text(encoding="utf-8")
         self.assertIn("ref: ${{ github.event.pull_request.base.sha }}", wf)
         self.assertIn("python3 .cstack/gate.py", wf)
         self.assertNotIn("pull_request_target", wf)

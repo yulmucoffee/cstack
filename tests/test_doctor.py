@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def doctor(*args, env=None):
     return subprocess.run([sys.executable, str(ROOT / "scripts/doctor.py"), *args, "--json"],
-                          capture_output=True, text=True, env=env)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
 
 
 def install(target, *args):
     subprocess.run([sys.executable, str(ROOT / "scripts/install.py"), "--target", str(target), *args],
-                   capture_output=True, text=True, check=True)
+                   capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
 
 
 def statuses(result):
@@ -50,7 +50,7 @@ class DoctorTests(unittest.TestCase):
     def test_clean_after_owner_sets_trusted_authors(self):
         install(self.target)
         policy = self.target / ".cstack/policy.json"
-        data = json.loads(policy.read_text())
+        data = json.loads(policy.read_text(encoding="utf-8"))
         data["trusted_authors"] = ["maintainer"]
         policy.write_text(json.dumps(data))
         result = doctor("--target", str(self.target), "--no-github")
@@ -71,7 +71,7 @@ class DoctorTests(unittest.TestCase):
     def test_global_checks_only_tools_present(self):
         home = self.target / "home"
         (home / ".claude").mkdir(parents=True)
-        env = dict(os.environ, HOME=str(home))
+        env = dict(os.environ, HOME=str(home), USERPROFILE=str(home))  # Path.home() reads USERPROFILE on Windows
         env.pop("CODEX_HOME", None)
         found = statuses(doctor("--global", env=env))
         self.assertEqual(found["no routing block in ~/.claude/CLAUDE.md"], "todo")

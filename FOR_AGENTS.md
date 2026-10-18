@@ -36,7 +36,7 @@ Use a stable location so later upgrades are a `git pull`:
 git clone --depth 1 https://github.com/yulmucoffee/cstack.git ~/.cstack/src || git -C ~/.cstack/src pull --ff-only
 ```
 
-Needs Python 3.10 or later. The scripts use only the standard library and make no network calls, except that `doctor.py` uses `gh` when it is available.
+Needs Python 3.10 or later. On Windows, run the commands below with `py -3` or `python` instead of `python3`, which there is often the Microsoft Store stub. The scripts use only the standard library and make no network calls, except that `doctor.py` uses `gh` when it is available.
 
 ## Step 3. Install
 
