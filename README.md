@@ -13,7 +13,7 @@
 ![Codex](https://img.shields.io/badge/Codex-skill-10A37F)
 ![Cursor](https://img.shields.io/badge/Cursor-skill_+_BugBot-6E56CF)
 
-**English** · [한국어](README.ko.md)
+**English** · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
 
 ### Say "review this PR". Get a review with proof, not a wall of nits.
 

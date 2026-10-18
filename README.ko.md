@@ -13,7 +13,7 @@
 ![Codex](https://img.shields.io/badge/Codex-skill-10A37F)
 ![Cursor](https://img.shields.io/badge/Cursor-skill_+_BugBot-6E56CF)
 
-[English](README.md) · **한국어**
+[English](README.md) · **한국어** · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
 
 ### "이 PR 리뷰해줘" 한마디면, 지적의 나열이 아니라 증거가 붙은 리뷰가 옵니다.
 
