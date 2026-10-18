@@ -111,4 +111,4 @@ git -C ~/.cstack/src pull --ff-only
 python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
 ```
 
-Unmodified files upgrade automatically. Edited ones are reported as conflicts. Compare `~/.cstack/src/configs/policy.json` with the repository's copy for new keys.
+Unmodified files upgrade automatically. Edited ones are reported as conflicts. Compare `~/.cstack/src/templates/policy.json` with the repository's copy for new keys.

@@ -121,7 +121,7 @@ class RiskTests(unittest.TestCase):
                         gate.load_config(path)
 
     def test_shipped_policy_is_valid(self):
-        config = gate.load_config(ROOT / "configs/policy.json")
+        config = gate.load_config(ROOT / "templates/policy.json")
         self.assertEqual(config["trusted_authors"], [])
 
 

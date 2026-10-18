@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
-  <img alt="cstack: evidence before merge" src="assets/banner-light.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <img alt="cstack: evidence before merge" src="docs/assets/banner-light.svg" width="100%">
 </picture>
 
 <br/>
@@ -279,7 +279,7 @@ git -C ~/.cstack/src pull --ff-only
 python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
 ```
 
-수정하지 않은 파일은 자동으로 업그레이드되고, 수정한 파일은 충돌로 알려 줍니다. 시드 파일은 여러분 소유라 갱신되지 않으니, 새 키가 생겼는지 `configs/policy.json`과 비교하세요.
+수정하지 않은 파일은 자동으로 업그레이드되고, 수정한 파일은 충돌로 알려 줍니다. 시드 파일은 여러분 소유라 갱신되지 않으니, 새 키가 생겼는지 `templates/policy.json`과 비교하세요.
 
 </details>
 
@@ -292,8 +292,7 @@ FOR_AGENTS.md             AI 에이전트용 단계별 설치 안내
 scripts/install.py        설치 스크립트 (표준 라이브러리만)
 scripts/doctor.py         설치 점검 (표준 라이브러리, gh가 있으면 사용)
 scripts/gate.py           머지 게이트 (표준 라이브러리만)
-templates/                게이트 워크플로, 룰셋, REVIEW.md, 라우팅 블록
-configs/policy.json       기본 게이트 정책
+templates/                게이트 워크플로, 기본 정책, 룰셋, REVIEW.md, 라우팅 블록
 .cursor/                  BugBot 규칙과 설정
 .claude-plugin/           Claude Code 플러그인 매니페스트
 docs/design.md            신뢰 경계와 알려진 한계
@@ -312,7 +311,7 @@ python3 -m unittest discover -s tests -v
 아무것도 쓰지 않고 실제 PR에 게이트를 돌려 보려면:
 
 ```bash
-GH_TOKEN="$(gh auth token)" GITHUB_REPOSITORY=owner/repo PR_NUMBER=123 CSTACK_CONFIG=configs/policy.json python3 scripts/gate.py
+GH_TOKEN="$(gh auth token)" GITHUB_REPOSITORY=owner/repo PR_NUMBER=123 CSTACK_CONFIG=templates/policy.json python3 scripts/gate.py
 ```
 
 이슈와 PR 환영합니다. 스킬을 바꾸는 PR에는 그 변경이 에이전트 행동을 어떻게 바꾸는지, 가능하면 실제 작업에서의 전후 비교를 함께 적어 주세요.

@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
-  <img alt="cstack: evidence before merge" src="assets/banner-light.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <img alt="cstack: evidence before merge" src="docs/assets/banner-light.svg" width="100%">
 </picture>
 
 <br/>
@@ -279,7 +279,7 @@ git -C ~/.cstack/src pull --ff-only
 python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
 ```
 
-Files you have not edited upgrade automatically. Edited ones are reported as conflicts. Seed files stay yours, so compare them with `configs/policy.json` for new keys.
+Files you have not edited upgrade automatically. Edited ones are reported as conflicts. Seed files stay yours, so compare them with `templates/policy.json` for new keys.
 
 </details>
 
@@ -292,8 +292,7 @@ FOR_AGENTS.md             step-by-step setup for AI agents
 scripts/install.py        installer (stdlib only)
 scripts/doctor.py         setup checker (stdlib, uses gh if present)
 scripts/gate.py           the merge gate (stdlib only)
-templates/                gate workflow, ruleset, REVIEW.md, routing block
-configs/policy.json       default gate policy
+templates/                gate workflow, default policy, ruleset, REVIEW.md, routing block
 .cursor/                  BugBot rules and config
 .claude-plugin/           Claude Code plugin manifests
 docs/design.md            trust boundaries and known limits
@@ -312,7 +311,7 @@ python3 -m unittest discover -s tests -v
 Try the gate on a real PR without writing anything:
 
 ```bash
-GH_TOKEN="$(gh auth token)" GITHUB_REPOSITORY=owner/repo PR_NUMBER=123 CSTACK_CONFIG=configs/policy.json python3 scripts/gate.py
+GH_TOKEN="$(gh auth token)" GITHUB_REPOSITORY=owner/repo PR_NUMBER=123 CSTACK_CONFIG=templates/policy.json python3 scripts/gate.py
 ```
 
 Issues and PRs are welcome. For a change to the skill, show how it changes agent behavior, ideally with a before and after on a real task.

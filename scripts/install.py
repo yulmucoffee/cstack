@@ -36,7 +36,7 @@ GATE_FILES = {
     ".github/workflows/cstack-gate.yml": ROOT / "templates/workflows/cstack-gate.yml",
 }
 SEED_FILES = {
-    ".cstack/policy.json": ROOT / "configs/policy.json",
+    ".cstack/policy.json": ROOT / "templates/policy.json",
     ".cursor/config/bugbot.yaml": ROOT / ".cursor/config/bugbot.yaml",
     "REVIEW.md": ROOT / "templates/REVIEW.md",
     ".github/pull_request_template.md": ROOT / ".github/PULL_REQUEST_TEMPLATE.md",
@@ -220,7 +220,7 @@ def main() -> int:
     print(f"cstack {'dry-run complete' if args.dry_run else 'installed'}: {len(changes)} changes")
     if not args.global_ and not args.no_gate:
         print("NEXT: set trusted_authors in .cstack/policy.json, enable BugBot, and require "
-              "cstack-risk-gate plus your CI in a GitHub ruleset. See README 'Before first production use'.")
+              "cstack-risk-gate plus your CI in a GitHub ruleset. Run scripts/doctor.py, and see README 'Turn on enforcement'.")
     return 0
 
 
