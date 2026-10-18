@@ -1,269 +1,312 @@
-# cstack
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner-dark.svg">
+  <img alt="cstack: evidence before merge" src="assets/banner-light.svg" width="100%">
+</picture>
+
+<br/>
 
 [![ci](https://github.com/yulmucoffee/cstack/actions/workflows/ci.yml/badge.svg)](https://github.com/yulmucoffee/cstack/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Claude Code](https://img.shields.io/badge/Claude_Code-skill-D97757)
+![Codex](https://img.shields.io/badge/Codex-skill-10A37F)
+![Cursor](https://img.shields.io/badge/Cursor-skill_+_BugBot-6E56CF)
 
 **English** · [한국어](README.ko.md)
 
-**Evidence before merge.** Ask Claude Code, Codex or Cursor to review a PR or your code, in any words, and it runs the cstack review process. cstack is one agent skill for **Claude Code, Codex and Cursor**, a rules file for **Cursor BugBot**, and a small **GitHub merge gate**. Together they bring the Claude Code team's layered code-review process and poteto's [pstack](https://github.com/cursor/plugins/tree/main/pstack) engineering discipline into your own repositories.
+### Say "review this PR". Get a review with proof, not a wall of nits.
 
-The goal is not more code or more review comments. It is the smallest correct change, proven on the real surface, reviewed from a fresh context, with human attention spent only where the risk is.
+[Quick start](#quick-start) · [Use it](#use-it) · [How it works](#how-it-works) · [Turn on enforcement](#turn-on-enforcement) · [For agents](FOR_AGENTS.md)
 
-## Why
+</div>
 
-Agents write PRs faster than people can read them. The Claude Code team [describes](https://claude.dev/blog/solving-code-review-at-anthropic/) how they handled this. Merged PRs more than doubled while the share that had to be reverted fell by more than 40 percent. They did not drop review. They moved most of the reading to machines, layered the checks, scaled human approval to risk, and made sure review converges instead of looping.
+> [!TIP]
+> **Let your AI agent set it up.** Paste this into Claude Code, Codex or Cursor:
+>
+> ```text
+> Set up cstack for me by following https://github.com/yulmucoffee/cstack/blob/main/FOR_AGENTS.md
+> ```
+>
+> The agent asks whether you want it for yourself or for a repository. Then it installs, checks the result, and lists the few settings only you can change.
 
-pstack covers the other half: how an agent should work so that its output deserves trust. Sharpen the task, name the data shape, fix root causes, prove the one fact a change is safe because of, and use adversarial review across models.
+## Why cstack
 
-cstack packages both as files you can install and read, with no service to run.
+AI agents now write pull requests faster than people can read them. The Claude Code team [shared how they handle that](https://claude.dev/blog/solving-code-review-at-anthropic/). They moved most of the reading to machines, layered the checks, and matched human approval to risk. Merged PRs more than doubled, and the share that had to be reverted fell by more than 40 percent. poteto's [pstack](https://github.com/cursor/plugins/tree/main/pstack) covers how an agent should work so its output deserves trust.
 
-## What you get
+cstack packs both into files you install in a minute.
 
-| Layer | Files | Who reads it | Enforces? |
-| --- | --- | --- | --- |
-| Skill | `skills/cstack/SKILL.md` + `references/` | Claude Code, Codex, Cursor agents | No. It shapes how the agent works. |
-| BugBot rules | `.cursor/BUGBOT.md`, `.cursor/config/bugbot.yaml` | Cursor BugBot on every PR | No. It shapes what BugBot reports. |
-| Review routing | a marked block in `CLAUDE.md` and `AGENTS.md` | Claude Code, Codex, Cursor | No. It sends every review request to the skill. |
-| Review rules | `REVIEW.md` (starter) | Any AI reviewer, and your team | No. Owners tune it. |
-| Merge gate | `.cstack/gate.py`, `.cstack/policy.json`, `.github/workflows/cstack-gate.yml` | GitHub Actions | **Yes**, once a ruleset requires `cstack-risk-gate`. |
+<table>
+<tr>
+<td width="33%" valign="top">
 
-How a change moves through the layers:
+### 🔍 Reviews with proof
 
-```
-author verifies → fresh-context review → security review → required CI
-→ risk-tiered human approval (cstack-risk-gate) → merge queue → flag / staged release → rollback
-```
+Every "review this" runs two independent reviewers, ideally on different models. Each finding is checked by running the code. You get only the findings that survived, each with a `file:line` and a repro.
 
-Each layer catches some problems and misses others. Few problems get through all of them, and rollback handles the rest.
+</td>
+<td width="33%" valign="top">
 
-## Install
+### 🧭 Works where you are
 
-You need Python 3.10 or later and nothing else. The installer makes no network calls.
+One skill for **Claude Code**, **Codex** and **Cursor**, plus review rules for **Cursor BugBot**. No server and no account. Plain files in your repo or home folder.
 
-### Personal: the skill only
+</td>
+<td width="33%" valign="top">
 
-Use cstack in every repository you open, without touching the repository.
+### 🛡️ Approval that matches risk
+
+An optional GitHub check sets the number of human approvals a PR needs: 0 for docs, 1 for code, 2 for CI, auth, billing, migrations or outside authors.
+
+</td>
+</tr>
+</table>
+
+## Quick start
+
+You need Python 3.10 or later and `git`.
+
+**Option A: let your agent do it.** Use the prompt in the box above. The agent follows [FOR_AGENTS.md](FOR_AGENTS.md).
+
+**Option B: just for me, in every repository**
 
 ```bash
-git clone https://github.com/yulmucoffee/cstack.git
+git clone --depth 1 https://github.com/yulmucoffee/cstack.git ~/.cstack/src
 ```
 
 ```bash
-python3 cstack/scripts/install.py --global
+python3 ~/.cstack/src/scripts/install.py --global
 ```
 
-This writes `~/.claude/skills/cstack/` (Claude Code) and `~/.agents/skills/cstack/` (Codex), adds the review-routing block to `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` (only for tools you have installed), and writes `~/.cstack/manifest.json` to track upgrades. Cursor reads both skill folders. Run it again after `git pull` to upgrade.
+That's it. Open a new agent session and say "review my changes".
 
-**Claude Code plugin.** Alternatively, install it as a plugin inside Claude Code:
+**Option C: for my team's repository**
+
+```bash
+python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+```
+
+```bash
+python3 ~/.cstack/src/scripts/doctor.py --target /path/to/repo
+```
+
+The doctor shows what is set up and what is left. Commit the result, then see [Turn on enforcement](#turn-on-enforcement).
+
+<details>
+<summary><b>Prefer the Claude Code plugin?</b></summary>
 
 ```text
 /plugin marketplace add yulmucoffee/cstack
 /plugin install cstack@cstack
 ```
 
-On Claude Code 2.1.275 or later, `/plugin install cstack --marketplace yulmucoffee/cstack` does both in one step. Plugin skills are namespaced, so you invoke it as `/cstack:cstack`. A plugin cannot edit `CLAUDE.md`, so add the routing text from [Every review goes through cstack](#every-review-goes-through-cstack) yourself.
+The skill is then `/cstack:cstack`. A plugin cannot edit `CLAUDE.md`, so paste the text of [`templates/routing.md`](templates/routing.md) into `~/.claude/CLAUDE.md`. That way every review request reaches cstack.
 
-### Project: skill, BugBot and gate
+</details>
 
-Run from the cstack checkout and point it at your repository. Look at the dry run first.
+## Use it
 
-```bash
-python3 scripts/install.py --target /path/to/your-repo --dry-run
+Just ask, in any words and any language. You do not need to name the skill.
+
+| You say | What happens |
+| --- | --- |
+| "Review this PR", "PR 42 리뷰해줘" | **review**: reads the PR and runs two independent reviewers. Verifies each finding by running code. Reports to you. Read-only. Posts to the PR only if you ask. |
+| "Check my changes before I commit" | **review** of your uncommitted work. |
+| "The export button double-submits. Fix it." | **fix**: reproduces it first, fixes the root cause, shows before and after. |
+| "Get PR 42 green", "Address the BugBot comments" | **babysit**: conflicts, then threads, then CI. Stops at merge-ready and never merges. |
+| "Ship PRs 41 to 43" | **ship**: only when you say so explicitly. Lands the verified PRs from the bottom of the stack. |
+
+Built-in commands such as `/code-review`, `/security-review` and Codex `/review` still work. cstack runs them as reviewers inside its own process.
+
+<details>
+<summary><b>What a review report looks like</b></summary>
+
+```text
+MODE: review | VERDICT: BLOCKED | REF: 6c41928
+FINDINGS: 2 actionable
+  [ACT ON][high]   cart.py:4  coupon > subtotal -> negative total -> repro: total([20], {amount: 50}) == -30
+  [ACT ON][medium] cart.py:4  negative coupon amount raises the price -> repro: {amount: -30} -> 50
+PROOF: python3 repro.py -> both reproduced on the branch, absent on main
+SAFETY FACT: callers without a coupon are unaffected: PROVED (ran both branches)
+INDEPENDENCE: Sonnet reviewer + Opus reviewer, both found #1 and #2
+NEXT: clamp at zero, validate the amount, add the four missing tests
 ```
 
-```bash
-python3 scripts/install.py --target /path/to/your-repo
+This is a real run on a demo repository. It shows the order of a report: verdict and count first, proof attached, and the independence it actually had.
+
+</details>
+
+<details>
+<summary><b>How to write a good request</b></summary>
+
+From pstack's prompting advice:
+- **Put in:** the goal, a check that can pass or fail, the proof you want to see, what you already know, and real limits ("repro first", "don't merge").
+- **Leave out:** how to do it, a list of steps, and your guess at the cause.
+- **Steer in one line:** "I asked for a repro, not a fix yet."
+
+</details>
+
+## How it works
+
+Review happens in layers. No single layer has to catch everything.
+
+```mermaid
+flowchart LR
+  subgraph before["Before the PR: cstack skill"]
+    direction TB
+    a1["Author proves it<br/>tests · repro · real run"] --> a2["Fresh-context review<br/>2+ reviewers · verified findings"]
+  end
+  subgraph pr["On the PR"]
+    direction TB
+    b1["BugBot · CI · security review"] --> b2{"cstack-risk-gate<br/>0 / 1 / 2 humans"}
+  end
+  subgraph after["After merge"]
+    direction TB
+    c1["Merge queue · flags<br/>staged release · rollback"]
+  end
+  before --> pr --> after
 ```
+
+**What the skill insists on**
+
+- **Proof, not claims.** Every claim carries its evidence or is labeled `measured`, `inferred` or `guess`.
+- **Two reviewers for anything but docs.** A short diff is not an exception. The skill reports the independence it actually had.
+- **Verify before reporting.** Style-only findings are dropped. Bugs that existed before the PR are labeled, so they do not read as the author's fault.
+- **One safety fact.** It finds the single fact the change is safe because of and proves it by running code, or says `UNPROVEN`.
+- **Reviews converge.** At most three rounds on one problem. After the first pass it re-reviews only the new diff, names the bug class, and never repeats a finding.
+- **Babysit is not ship.** Getting a PR green never merges it.
+
+**Risk tiers set by the gate**
+
+| Change | Trusted author | Anyone else |
+| --- | :---: | :---: |
+| Docs only (`.md`, `.mdx`, `.rst`, `.adoc`, images in `docs/`) | 0 | 2 |
+| Code, config, dependencies, agent instructions (`CLAUDE.md`, `AGENTS.md`, `REVIEW.md`, skills) | 1 | 2 |
+| CI, CODEOWNERS, `.cstack/`, BugBot config, agent hooks, auth, security, billing, payments, migrations, secrets, Terraform, lockfiles | 2 | 2 |
+
+On every tier, approvals count only when they meet all of these:
+- They are on the current commit.
+- They come from repository owners, members or collaborators, never the PR's author.
+- No change request is standing, and every review thread is resolved.
+- The AI reviewer's check passed (`success`, not `neutral`) and came from its real GitHub App.
+
+The gate fails closed: an API error, a draft PR or a broken policy blocks the merge. Full rules are in [docs/design.md](docs/design.md).
+
+## Turn on enforcement
+
+The skill works right after install. The merge gate enforces nothing until GitHub requires it. Run the doctor at any time to see where you are.
+
+- [ ] **Merge the install PR first.** Its `cstack-risk-gate` check fails, because the base branch does not have the gate yet. A maintainer merges this one PR with normal review.
+- [ ] **Name trusted maintainers** in `.cstack/policy.json` under `trusted_authors`. Until then every PR needs two approvals.
+- [ ] **Enable BugBot** for the repository in the Cursor dashboard. If you use another AI reviewer, change `required_check_names` and `required_check_apps`.
+- [ ] **Require the checks** with a ruleset. Add your CI checks to [`templates/ruleset.json`](templates/ruleset.json), then run the command below, or set the same thing up in Settings › Rules.
+- [ ] **Protect the gate.** Add CODEOWNERS for `.github/workflows/`, `.cstack/` and `.cursor/`, and require code-owner review. Without it, a PR could edit the gate's own workflow.
+
+```bash
+gh api -X POST repos/OWNER/REPO/rulesets --input ~/.cstack/src/templates/ruleset.json
+```
+
+> [!IMPORTANT]
+> cstack never merges on its own. A passing gate means "allowed", not "go".
+
+## Reference
+
+<details>
+<summary><b>Installer: what goes where</b></summary>
 
 | Path in your repo | Kind | On reinstall |
 | --- | --- | --- |
 | `.claude/skills/cstack/`, `.agents/skills/cstack/` | managed | upgraded if you have not edited it |
-| `.cursor/BUGBOT.md` | marked block | only the `<!-- cstack:begin -->` block is replaced |
+| `CLAUDE.md`, `AGENTS.md` | marked block | only the review-routing block is added or replaced |
+| `.cursor/BUGBOT.md` | marked block | only the cstack block is replaced |
 | `.cstack/gate.py`, `.github/workflows/cstack-gate.yml` | managed | upgraded if you have not edited it |
 | `.cstack/policy.json`, `.cursor/config/bugbot.yaml`, `REVIEW.md`, `.github/pull_request_template.md` | seed | created once, never overwritten |
-| `CLAUDE.md`, `AGENTS.md` | marked block | the review-routing block is added or replaced; the rest of the file is untouched |
 | `.cstack/manifest.json` | bookkeeping | hashes of managed files |
 
-Options: `--no-gate` skips the gate workflow, `gate.py` and `policy.json`, and still installs the skill, BugBot files, `REVIEW.md` and the PR template. `--hosts claude`, `--hosts codex` or `--hosts claude,codex,cursor` picks skill locations. `--no-routing` leaves `CLAUDE.md` and `AGENTS.md` alone. A `CLAUDE.md` that only imports `@AGENTS.md` is not touched, since the block in `AGENTS.md` already reaches Claude Code. `--force` overwrites managed files you edited locally. Seed files are never overwritten, even with `--force`. An existing PR template anywhere GitHub looks for one is left alone.
+**Options**
 
-Commit the result. Restart the agent or open a new session so it picks up the skill. To upgrade later, `git pull` in the cstack checkout and run the same command. Seed files stay yours, so compare `configs/policy.json` with your copy for new keys. The gate prints a warning when a required check is not bound to an App.
-
-### Before first production use
-
-The gate does nothing until GitHub requires it. Do these in order.
-
-1. **Set trusted authors.** Put the GitHub logins of trusted human maintainers in `.cstack/policy.json` under `trusted_authors`. With the empty default, every PR needs two human approvals. Review the sensitive path list and add your own with `additional_high_risk_patterns`.
-2. **Enable BugBot** for the repository in the Cursor dashboard. The YAML file configures BugBot. It does not turn it on. Without BugBot, the required `Cursor Bugbot` check never appears and the gate stays blocked, on purpose. If you use a different AI reviewer, change `required_check_names` and `required_check_apps`.
-3. **Require the checks.** In a GitHub ruleset for the default branch, require `cstack-risk-gate`, your build and tests, your security scans and `Cursor Bugbot`. Bind each check to the GitHub App that publishes it. Turn on required review, dismiss stale approvals, require conversation resolution and restrict who can bypass.
-4. **Protect the gate itself.** On `pull_request`, GitHub runs the workflow file from the PR, so a PR could edit `cstack-gate.yml`. If your plan offers it, use the ruleset rule *Require workflows to pass before merging* with the default-branch copy. Otherwise add CODEOWNERS for `.github/workflows/`, `.cstack/`, `.cursor/` and `CODEOWNERS`, and require code-owner review. The gate already treats those paths as high risk.
-5. **Dry-run on a throwaway PR.** Try a docs change, a code change and a workflow change before anyone relies on zero-human merges.
-
-cstack never merges on its own. A passing gate means "allowed", not "go".
-
-## Use it
-
-### Every review goes through cstack
-
-You do not have to name the skill. "Review this PR", "check my changes", "is this safe to merge", "PR 42 리뷰해줘" and similar requests all run cstack's review path:
-1. Resolve the target: a PR number, a branch, or your uncommitted work.
-2. Stay read-only.
-3. Fan out to independent reviewers and verify each finding.
-4. Prove the one safety fact.
-5. Report in your language.
-
-Built-in commands like `/code-review` and `/security-review` still run, as reviewers inside cstack.
-
-Two things make this reliable. The skill's description claims review requests, and the installer adds this block to `CLAUDE.md` and `AGENTS.md`, which the agent reads at the start of every session:
-
-```markdown
-## Code review (cstack)
-
-For any request to review code, a diff, a branch, a commit or a pull request, in any wording or language ("review this PR", "code review", "check my changes", "PR 리뷰", "코드 검토"), use the `cstack` skill in `review` mode, even when another review skill or command also matches. Built-in review commands such as `/code-review`, `/security-review` or `/review` run as reviewers inside cstack, not instead of it. Requests to babysit, merge or ship a PR also go through cstack.
-```
-
-For the Claude Code plugin, or for Cursor across all projects, paste the same text into `~/.claude/CLAUDE.md` or into Cursor's **Settings → Rules → User Rules**.
-
-### Invoke it directly
-
-| Host | Invoke |
+| Flag | What it does |
 | --- | --- |
-| Claude Code | `/cstack` (project or personal install) or `/cstack:cstack` (plugin). Claude may also load it when the task matches. |
-| Codex | `$cstack`, or pick it from `/skills`. Codex may also load it when the task matches. |
-| Cursor | Type `/cstack` in Agent chat, or let the agent pick it up. |
-| BugBot | Nothing to do. It reads `.cursor/BUGBOT.md` on every PR. |
+| `--global` | Personal install. Writes the skill to `~/.claude/skills` and `~/.agents/skills`, and the routing block to `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` for tools you have. |
+| `--no-gate` | Skips the gate workflow, `gate.py` and `policy.json`. |
+| `--no-routing` | Leaves `CLAUDE.md` and `AGENTS.md` alone. |
+| `--hosts claude,codex,cursor` | Picks skill locations. The default `claude,codex` also covers Cursor. |
+| `--force` | Overwrites managed files you edited. Seed files are never overwritten. |
+| `--dry-run` | Shows what would change. |
 
-The skill picks a mode from your request and says which one it chose.
+A `CLAUDE.md` that only imports `@AGENTS.md` is left alone. An existing PR template anywhere GitHub looks is respected.
 
-| Mode | Ask for | Writes code | Stops at |
-| --- | --- | --- | --- |
-| `build` | a feature or change | yes | PR open with proof |
-| `fix` | a bug fixed | yes | failing then passing proof, PR open |
-| `review` | a review, "are we sure" | no | a verdict with findings |
-| `investigate` | how or why something works | no | a cited answer |
-| `babysit` | "get PR 42 green", "address the BugBot comments", "check on PR 42" | fixes on the PR branch | `MERGE-READY` or `BLOCKED` |
-| `ship` | "ship", "merge" or "land" in so many words | merges | the top of the verified run |
+</details>
 
-### Example prompts
-
-```text
-/cstack review this branch against its PR description. prove the riskiest assumption with a script that runs the real code. don't edit anything.
-```
-
-```text
-/cstack the export button double-submits on slow networks. repro first on the real page, then fix and show me the before and after.
-```
-
-```text
-/cstack babysit PR 42 to merge-ready. triage the BugBot threads and tell me what's blocking. don't merge.
-```
-
-```text
-/cstack ship PRs 41 to 43 bottom-up. stop at the first one without an independent verdict.
-```
-
-```text
-$cstack inspect my current branch, check the failure paths, and give me a merge-readiness verdict. do not merge.
-```
-
-### Writing a good prompt
-
-This follows pstack's prompting advice. State the goal and how you will know it is done. Let the skill supply the steps.
-
-- **Put in:** the goal, a done check that can pass or fail, the proof you want to see (command output, a screenshot, a before and after number), what you already know (a repro step, a log), and real constraints ("repro first", "no behavior change", "don't merge").
-- **Leave out:** how to do it, a list of steps, and your theory of the cause. A stated guess narrows the search.
-- **Steer in one line:** "I asked for a repro, not a fix yet." "Show me the real output, not the build log."
-
-### What a report looks like
-
-```text
-MODE: review | VERDICT: PASS+NOTES | REF: 9f2c1e4
-FINDINGS: 1 actionable
-  [ACT ON][high] src/cache/evict.ts:L88 trigger: refresh during eviction -> live entry dropped -> repro: scripts/evict-race.ts (fails on 9f2c1e4)
-PROOF: npm test -- cache -> 42 passed; node scripts/evict-race.ts -> FAIL as expected
-SAFETY FACT: eviction only removes entries past TTL: UNPROVEN (race above breaks it)
-RISK: tier medium, approvals 0/1, Cursor Bugbot success
-INDEPENDENCE: Claude Opus subagent + Sonnet subagent (different models)
-NEXT: guard eviction with the entry's generation counter and rerun the race script
-```
-
-## Risk tiers
-
-The gate computes a floor from the changed paths and the author. Humans and reviewers can always raise it.
-
-| Change | Trusted author | Anyone else |
-| --- | ---: | ---: |
-| Docs only (`.md`, `.mdx`, `.rst`, `.adoc`, images under `docs/`) | 0 | 2 |
-| Code, config, dependency manifests, agent or reviewer instructions (`CLAUDE.md`, `AGENTS.md`, `REVIEW.md`, skills) | 1 | 2 |
-| CI workflows and other CI configs, CODEOWNERS, `.cstack/`, BugBot config, agent hooks and MCP config, auth, security, billing, payments, migrations, secrets, Terraform, lockfiles | 2 | 2 |
-
-On every tier the gate also requires that approvals are on the current head commit and from human repository owners, members or collaborators other than the author (drive-by approvals never count), that no change request is standing and no review thread is unresolved, and that every required check concludes `success` (not `neutral`) from its expected App. A zero-human merge is allowed only when at least one automated review check is required. API errors, drafts and malformed policy block the merge.
-
-This is stricter than the blog's tiers on purpose. You can loosen it with evidence. See [design and trust boundaries](docs/design.md) for every rule and its limits.
-
-### `policy.json`
+<details>
+<summary><b><code>policy.json</code> keys</b></summary>
 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `trusted_authors` | `[]` | GitHub logins that get the lighter tiers. Case-insensitive. |
 | `additional_high_risk_patterns` | `infra/**`, `**/deploy/**`, `**/production/**` | Extra paths that always need two humans. |
-| `required_check_names` | `["Cursor Bugbot"]` | Checks that must conclude `success` on the head. |
-| `required_check_apps` | `{"Cursor Bugbot": "cursor"}` | Only count a check if this GitHub App published it. |
-| `approver_associations` | `OWNER`, `MEMBER`, `COLLABORATOR` | Whose approvals count. Narrow it if not every org member should approve. |
-| `require_resolved_review_threads` | `true` | Block on unresolved review threads. |
-| `check_wait_seconds` | `600` | How long to wait for required checks that are still running. Keep it below the workflow's `timeout-minutes`. |
+| `required_check_names` | `["Cursor Bugbot"]` | Checks that must conclude `success`. |
+| `required_check_apps` | `{"Cursor Bugbot": "cursor"}` | Only count a check published by this GitHub App. |
+| `approver_associations` | `OWNER`, `MEMBER`, `COLLABORATOR` | Whose approvals count. |
+| `require_resolved_review_threads` | `true` | Block on unresolved threads. |
+| `check_wait_seconds` | `600` | How long to wait for required checks still running. |
 
-## What the skill does differently
+</details>
 
-- **Proof, not claims.** Every claim carries its evidence or says `measured`, `inferred` or `guess`. It never reports a test it did not run.
-- **Fresh, independent review.** At least two read-only reviewers in parallel, ideally on different models, with only the intent, diff and rubric. It names the independence it actually had.
-- **Verify before posting.** Each finding is checked in a separate pass. Style-only findings are dropped. Pre-existing bugs are labeled so they do not read as the author's fault.
-- **One safety fact.** It finds the single fact the change is safe because of and pushes it down an evidence ladder, from "asserted" to "reproduced in the running app". If it cannot prove it, it says `UNPROVEN`.
-- **Convergence.** Three rounds on one problem, then rethink. Diff-only re-review after the first pass. Flag the bug class. Never repeat a finding.
-- **Skeptical BugBot triage.** Each thread is `fix`, `dismiss` with a disproof, or `ask`. Security, data and migration findings are never auto-dismissed.
-- **Babysit is not ship.** Babysitting stops at merge-ready. Shipping needs an explicit request, an independent verdict per PR, and lands only the contiguous verified run from the bottom of the stack.
-- **Lessons become structure.** A repeated finding becomes a lint rule, test or `REVIEW.md` line. An incident becomes an eval case.
+<details>
+<summary><b>Upgrading</b></summary>
 
-## Repository layout
-
-```text
-skills/cstack/SKILL.md                     the workflow, for every agent host
-skills/cstack/agents/openai.yaml           Codex display metadata
-skills/cstack/references/                  review rubric, merge playbook, BugBot triage, principles, evals
-.claude-plugin/                            Claude Code plugin and marketplace manifests
-.cursor/BUGBOT.md                          BugBot review rules (also used by this repo)
-.cursor/config/bugbot.yaml                 BugBot repository config
-templates/workflows/cstack-gate.yml        gate workflow, installed into your repo
-templates/REVIEW.md                        starter REVIEW.md
-templates/routing.md                       review-routing block for CLAUDE.md and AGENTS.md
-.github/PULL_REQUEST_TEMPLATE.md           PR template: Why, Scope, Testing, Risk, How to revert
-configs/policy.json                        default gate policy
-scripts/gate.py                            the gate (stdlib only)
-scripts/install.py                         the installer (stdlib only)
-tests/                                     gate and installer tests
-docs/design.md                             trust boundaries and known limits
+```bash
+git -C ~/.cstack/src pull --ff-only
 ```
 
-## Development
+```bash
+python3 ~/.cstack/src/scripts/install.py --target /path/to/repo
+```
+
+Files you have not edited upgrade automatically. Edited ones are reported as conflicts. Seed files stay yours, so compare them with `configs/policy.json` for new keys.
+
+</details>
+
+<details>
+<summary><b>Repository layout</b></summary>
+
+```text
+skills/cstack/            the skill: SKILL.md, references, Codex metadata
+FOR_AGENTS.md             step-by-step setup for AI agents
+scripts/install.py        installer (stdlib only)
+scripts/doctor.py         setup checker (stdlib, uses gh if present)
+scripts/gate.py           the merge gate (stdlib only)
+templates/                gate workflow, ruleset, REVIEW.md, routing block
+configs/policy.json       default gate policy
+.cursor/                  BugBot rules and config
+.claude-plugin/           Claude Code plugin manifests
+docs/design.md            trust boundaries and known limits
+tests/                    gate, installer and doctor tests
+```
+
+</details>
+
+<details>
+<summary><b>Development</b></summary>
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
 
-To try the gate against a real PR without writing anything:
+Try the gate on a real PR without writing anything:
 
 ```bash
 GH_TOKEN="$(gh auth token)" GITHUB_REPOSITORY=owner/repo PR_NUMBER=123 CSTACK_CONFIG=configs/policy.json python3 scripts/gate.py
 ```
 
-Issues and PRs are welcome. Changes to the skill should come with a reason it changes agent behavior, ideally a before and after on a real task.
+Issues and PRs are welcome. For a change to the skill, show how it changes agent behavior, ideally with a before and after on a real task.
+
+</details>
 
 ## Credits
 
 - Addy Osmani, Morgan Westlee Lunt and Qing Wang, [How the Claude Code team does code review](https://claude.dev/blog/solving-code-review-at-anthropic/) (October 15, 2026).
-- Lauren Tan ([poteto](https://github.com/poteto)), [pstack](https://github.com/cursor/plugins/tree/main/pstack), MIT. Principles, review rubric, BugBot triage and shipping discipline are adapted from it. See [NOTICE.md](NOTICE.md).
+- Lauren Tan ([poteto](https://github.com/poteto)), [pstack](https://github.com/cursor/plugins/tree/main/pstack), MIT. The principles, review rubric, BugBot triage and shipping discipline are adapted from it. See [NOTICE.md](NOTICE.md).
 
-cstack is independent and not affiliated with or endorsed by Anthropic, Cursor or OpenAI.
-
-## License
-
-[MIT](LICENSE)
+cstack is independent and not affiliated with or endorsed by Anthropic, Cursor or OpenAI. [MIT License](LICENSE).
