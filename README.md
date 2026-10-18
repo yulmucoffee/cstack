@@ -158,13 +158,24 @@ flowchart LR
   end
   subgraph pr["On the PR"]
     direction TB
-    b1["BugBot · CI · security review"] --> b2{"cstack-risk-gate<br/>0 / 1 / 2 humans"}
+    b1["BugBot · CI · security review"] --> b2(["cstack-risk-gate<br/>0 / 1 / 2 humans"])
   end
   subgraph after["After merge"]
     direction TB
     c1["Merge queue · flags<br/>staged release · rollback"]
   end
   before --> pr --> after
+  classDef skill fill:#6366f1,stroke:#4f46e5,color:#ffffff
+  classDef check fill:#a855f7,stroke:#9333ea,color:#ffffff
+  classDef gate fill:#22c55e,stroke:#16a34a,color:#ffffff
+  classDef ship fill:#d946ef,stroke:#c026d3,color:#ffffff
+  class a1,a2 skill
+  class b1 check
+  class b2 gate
+  class c1 ship
+  style before fill:transparent,stroke:#6366f1,stroke-width:2px
+  style pr fill:transparent,stroke:#a855f7,stroke-width:2px
+  style after fill:transparent,stroke:#d946ef,stroke-width:2px
 ```
 
 **What the skill insists on**

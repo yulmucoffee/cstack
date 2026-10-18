@@ -158,13 +158,24 @@ flowchart LR
   end
   subgraph pr["PR에서"]
     direction TB
-    b1["BugBot · CI · 보안 리뷰"] --> b2{"cstack-risk-gate<br/>사람 0 / 1 / 2명"}
+    b1["BugBot · CI · 보안 리뷰"] --> b2(["cstack-risk-gate<br/>사람 0 / 1 / 2명"])
   end
   subgraph after["머지 후"]
     direction TB
     c1["머지 큐 · 플래그<br/>단계적 배포 · 롤백"]
   end
   before --> pr --> after
+  classDef skill fill:#6366f1,stroke:#4f46e5,color:#ffffff
+  classDef check fill:#a855f7,stroke:#9333ea,color:#ffffff
+  classDef gate fill:#22c55e,stroke:#16a34a,color:#ffffff
+  classDef ship fill:#d946ef,stroke:#c026d3,color:#ffffff
+  class a1,a2 skill
+  class b1 check
+  class b2 gate
+  class c1 ship
+  style before fill:transparent,stroke:#6366f1,stroke-width:2px
+  style pr fill:transparent,stroke:#a855f7,stroke-width:2px
+  style after fill:transparent,stroke:#d946ef,stroke-width:2px
 ```
 
 **스킬이 반드시 지키는 것**
