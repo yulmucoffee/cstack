@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Install cstack into a repository for Claude Code, Codex, Cursor and BugBot.
 
+Also adds a short routing block to CLAUDE.md and AGENTS.md so that any request
+to review code or a PR goes through the cstack skill, not a competing one.
+
 No network access or third-party dependencies. Safe by default:
 - cstack-managed files are tracked by hash in .cstack/manifest.json, so an
   unmodified older copy upgrades cleanly and a locally edited copy is a conflict;
@@ -12,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -59,12 +63,12 @@ def managed_plan(hosts: list[str], skill_only: bool, gate: bool) -> dict[str, Pa
     return plan
 
 
-def merged_bugbot(previous: str) -> str:
-    body = (ROOT / ".cursor/BUGBOT.md").read_text(encoding="utf-8")
+def merged_block(previous: str, body: str, path: Path) -> str:
+    """Insert or replace the one marked cstack block, leaving the rest of the file alone."""
     block = f"{MARKER_START}\n{body.rstrip()}\n{MARKER_END}"
     starts, ends = previous.count(MARKER_START), previous.count(MARKER_END)
     if starts != ends or starts > 1 or (starts and previous.index(MARKER_END) < previous.index(MARKER_START)):
-        raise ValueError("BUGBOT.md has malformed cstack markers; fix or remove the cstack block and rerun")
+        raise ValueError(f"{path} has malformed cstack markers; fix or remove the cstack block and rerun")
     if starts:
         before, tail = previous.split(MARKER_START, 1)
         _, after = tail.split(MARKER_END, 1)
@@ -72,8 +76,47 @@ def merged_bugbot(previous: str) -> str:
     return previous.rstrip() + ("\n\n" if previous.strip() else "") + block + "\n"
 
 
+def imports_agents_md(claude_md: Path) -> bool:
+    if not claude_md.is_file():
+        return False
+    return any(line.strip() == "@AGENTS.md" for line in claude_md.read_text(encoding="utf-8").splitlines())
+
+
+def block_files(target: Path, hosts: list[str], skill_only: bool, routing: bool) -> dict[Path, str]:
+    """Files that get a marked cstack block, mapped to the block body."""
+    blocks: dict[Path, str] = {}
+    if not skill_only:
+        blocks[target / ".cursor/BUGBOT.md"] = (ROOT / ".cursor/BUGBOT.md").read_text(encoding="utf-8")
+    if not routing:
+        return blocks
+    body = (ROOT / "templates/routing.md").read_text(encoding="utf-8")
+    wanted: list[Path] = []
+    if skill_only:
+        # Personal install: only touch the instruction files of tools that are present.
+        if "claude" in hosts and (target / ".claude").is_dir():
+            wanted.append(target / ".claude/CLAUDE.md")
+        codex_home = Path(os.environ["CODEX_HOME"]) if os.environ.get("CODEX_HOME") else target / ".codex"
+        if "codex" in hosts and codex_home.is_dir():
+            override = codex_home / "AGENTS.override.md"
+            wanted.append(override if override.is_file() else codex_home / "AGENTS.md")
+    else:
+        agents = target / "AGENTS.md"
+        if {"codex", "cursor"} & set(hosts):
+            wanted.append(agents)
+        claude = target / "CLAUDE.md"
+        if "claude" in hosts and not (agents in wanted and imports_agents_md(claude)):
+            wanted.append(claude)
+    seen: set[Path] = set()
+    for path in wanted:
+        real = path.resolve()
+        if real not in seen:
+            seen.add(real)
+            blocks[path] = body
+    return blocks
+
+
 def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: bool = False,
-            gate: bool = True, skill_only: bool = False) -> list[str]:
+            gate: bool = True, skill_only: bool = False, routing: bool = True) -> list[str]:
     if not target.is_dir():
         raise ValueError(f"Target directory does not exist: {target}")
     unknown = [h for h in hosts if h not in HOST_DIRS]
@@ -100,9 +143,12 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
             writes.append((src, dst))
         else:
             conflicts.append(rel)
-    bugbot = target / ".cursor/BUGBOT.md"
-    previous = bugbot.read_text(encoding="utf-8") if bugbot.exists() else ""
-    updated = previous if skill_only else merged_bugbot(previous)
+    block_updates: list[tuple[Path, str]] = []
+    for path, body in block_files(target, hosts, skill_only, routing).items():
+        previous = path.read_text(encoding="utf-8") if path.exists() else ""
+        updated = merged_block(previous, body, path)
+        if updated != previous:
+            block_updates.append((path, updated))
     if conflicts:
         raise ValueError("These files differ from the cstack copy (edited locally, or installed before "
                          ".cstack/manifest.json existed). Review them, then rerun with --force:\n"
@@ -133,11 +179,11 @@ def install(target: Path, *, hosts: list[str], force: bool = False, dry_run: boo
         if not dry_run:
             dst.parent.mkdir(parents=True, exist_ok=True)
             dst.write_bytes(src.read_bytes())
-    if updated != previous:
-        log.append(f"MERGE  {bugbot}")
+    for path, updated in block_updates:
+        log.append(f"MERGE  {path}")
         if not dry_run:
-            bugbot.parent.mkdir(parents=True, exist_ok=True)
-            bugbot.write_text(updated, encoding="utf-8")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(updated, encoding="utf-8")
 
     files = {rel: d for rel, d in recorded.items() if rel not in removals and (target / rel).exists()}
     files.update({rel: sha256(src) for rel, src in plan.items()})
@@ -156,6 +202,8 @@ def main() -> int:
     parser.add_argument("--hosts", default="claude,codex",
                         help="Comma-separated skill hosts: claude, codex, cursor (default: claude,codex; Cursor reads both)")
     parser.add_argument("--no-gate", action="store_true", help="Skip the GitHub Actions gate and policy")
+    parser.add_argument("--no-routing", action="store_true",
+                        help="Do not add the review-routing block to CLAUDE.md / AGENTS.md")
     parser.add_argument("--force", action="store_true", help="Overwrite locally modified cstack-managed files")
     parser.add_argument("--dry-run", action="store_true", help="Report changes without writing")
     args = parser.parse_args()
@@ -163,7 +211,7 @@ def main() -> int:
     hosts = [h.strip() for h in args.hosts.split(",") if h.strip()]
     try:
         changes = install(target.resolve(), hosts=hosts, force=args.force, dry_run=args.dry_run,
-                          gate=not args.no_gate, skill_only=args.global_)
+                          gate=not args.no_gate, skill_only=args.global_, routing=not args.no_routing)
     except (OSError, ValueError) as e:
         print("cstack install failed:", e, file=sys.stderr)
         return 1

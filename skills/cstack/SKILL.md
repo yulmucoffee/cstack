@@ -1,6 +1,7 @@
 ---
 name: cstack
-description: Evidence-first engineering and pull-request review for Claude Code, Codex and Cursor. Use to build or fix code with real proof, review a diff or PR adversarially, triage BugBot or reviewer comments, babysit a PR to merge-ready, or land a verified stack when explicitly asked. Layered review, risk-tiered human approval, small diffs, convergent re-review.
+description: Code review and evidence-first engineering for Claude Code, Codex and Cursor. Use for ANY request to review code, a diff, a branch, a commit or a pull request ("review this PR", "code review", "check my changes", "is this safe to merge", "PR 리뷰", "코드 리뷰", "코드 검토", "리뷰해줘"), even when another review skill or command also matches, because cstack runs those as reviewers inside its own process. Also use to fix bugs with real proof, build changes with verification, triage BugBot or reviewer comments, babysit a PR to merge-ready, or land a verified stack when explicitly asked.
+argument-hint: "[review|fix|build|babysit|ship] [PR number, branch or task]"
 ---
 
 # cstack
@@ -31,6 +32,17 @@ Ship the smallest correct change, prove it on the real surface, review it from a
 Pushing a branch, opening a PR and posting review comments are visible to other people. Do them when the user asks or the repo's workflow clearly expects it. `review` reports findings to the user unless asked to post them.
 
 Babysit has three sub-modes. `drive` loops to merge-ready. `threads-only` answers review threads, with fixes only where a thread needs one. `check` is one status pass. A bare "check my PR" is `babysit check`. Declare the mode in your first line.
+
+### Review requests
+
+Any request to review code takes this path, whatever words it uses. Built-in commands such as `/code-review`, `/security-review` or Codex `/review` are reviewers inside it, not replacements for it.
+
+1. **Resolve the target.** A PR number or URL: `gh pr view <n> --json title,body,baseRefName,headRefOid,files` and `gh pr diff <n>`. A branch: `git diff origin/<base>...<branch>`. "My changes": staged, unstaged and untracked work against `HEAD`. Nothing named: the current branch against its base, and say which you chose.
+2. **Stay read-only.** To run a PR's code, check it out into a separate worktree (`gh pr checkout <n>` there, or `git worktree add`). Never modify the user's working tree in `review` mode.
+3. **Load context** per section 2, then **review** per section 5 at the effort the risk calls for, prove the safety fact per section 7, and run the cheapest real check: the tests that cover the diff, a repro script, the build.
+4. **Report** per section 12, in the user's language. Post to the PR only when asked. Then post inline comments for `ACT ON` findings and one summary that starts with the count, writing each body to a file and sending it with `gh api ... --input`.
+
+A request that is not about reviewing still gets the mode table above, so "fix what the review found" becomes `fix`.
 
 ## 2. Load context before acting
 

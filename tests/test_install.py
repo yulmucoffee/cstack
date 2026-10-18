@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -148,6 +149,78 @@ class InstallTests(unittest.TestCase):
         self.assertTrue((self.target / ".claude/skills/cstack/SKILL.md").exists())
         self.assertFalse((self.target / ".cursor").exists())
         self.assertFalse((self.target / "REVIEW.md").exists())
+
+
+class RoutingTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.target = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def routed(self, path):
+        return path.is_file() and "use the `cstack` skill in `review` mode" in path.read_text()
+
+    def test_project_install_routes_reviews_in_claude_and_agents_md(self):
+        (self.target / "CLAUDE.md").write_text("# House rules\n\nUse tabs.\n")
+        self.assertEqual(run("--target", str(self.target), "--no-gate").returncode, 0)
+        self.assertTrue(self.routed(self.target / "CLAUDE.md"))
+        self.assertTrue(self.routed(self.target / "AGENTS.md"))
+        self.assertIn("Use tabs.", (self.target / "CLAUDE.md").read_text())
+        again = run("--target", str(self.target), "--no-gate")
+        self.assertIn("0 changes", again.stdout)
+        self.assertEqual((self.target / "CLAUDE.md").read_text().count("cstack:begin"), 1)
+
+    def test_claude_md_that_imports_agents_md_is_left_alone(self):
+        (self.target / "CLAUDE.md").write_text("@AGENTS.md\n")
+        run("--target", str(self.target), "--no-gate")
+        self.assertEqual((self.target / "CLAUDE.md").read_text(), "@AGENTS.md\n")
+        self.assertTrue(self.routed(self.target / "AGENTS.md"))
+
+    def test_symlinked_claude_md_gets_one_block(self):
+        (self.target / "AGENTS.md").write_text("# Shared\n")
+        (self.target / "CLAUDE.md").symlink_to("AGENTS.md")
+        run("--target", str(self.target), "--no-gate")
+        self.assertEqual((self.target / "AGENTS.md").read_text().count("cstack:begin"), 1)
+
+    def test_hosts_pick_routing_files(self):
+        run("--target", str(self.target), "--no-gate", "--hosts", "claude")
+        self.assertTrue(self.routed(self.target / "CLAUDE.md"))
+        self.assertFalse((self.target / "AGENTS.md").exists())
+
+    def test_no_routing(self):
+        run("--target", str(self.target), "--no-gate", "--no-routing")
+        self.assertFalse((self.target / "CLAUDE.md").exists())
+        self.assertFalse((self.target / "AGENTS.md").exists())
+
+    def test_global_install_routes_only_for_tools_that_exist(self):
+        (self.target / ".claude").mkdir()
+        old = os.environ.pop("CODEX_HOME", None)
+        try:
+            installer.install(self.target, hosts=["claude", "codex"], skill_only=True)
+            self.assertTrue(self.routed(self.target / ".claude/CLAUDE.md"))
+            self.assertFalse((self.target / ".codex").exists())
+            (self.target / ".codex").mkdir()
+            (self.target / ".codex/AGENTS.override.md").write_text("# override\n")
+            installer.install(self.target, hosts=["claude", "codex"], skill_only=True)
+            self.assertTrue(self.routed(self.target / ".codex/AGENTS.override.md"))
+            self.assertFalse((self.target / ".codex/AGENTS.md").exists())
+            home = self.target / "elsewhere"
+            home.mkdir()
+            os.environ["CODEX_HOME"] = str(home)
+            installer.install(self.target, hosts=["codex"], skill_only=True)
+            self.assertTrue(self.routed(home / "AGENTS.md"))
+        finally:
+            os.environ.pop("CODEX_HOME", None)
+            if old is not None:
+                os.environ["CODEX_HOME"] = old
+
+    def test_skill_description_claims_review_requests(self):
+        text = (ROOT / "skills/cstack/SKILL.md").read_text()
+        description = text.split("description: ", 1)[1].split("\n", 1)[0]
+        for phrase in ["review this PR", "code review", "코드 리뷰", "even when another review skill"]:
+            self.assertIn(phrase, description)
 
 
 class PackageTests(unittest.TestCase):

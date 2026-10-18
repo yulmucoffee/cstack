@@ -2,7 +2,7 @@
 
 ## Three layers
 
-1. **The skill** (`skills/cstack/`). One `SKILL.md` with references, read by Claude Code, Codex and Cursor. It shapes how an agent builds, reviews, babysits and ships. It enforces nothing.
+1. **The skill** (`skills/cstack/`). One `SKILL.md` with references, read by Claude Code, Codex and Cursor. It shapes how an agent builds, reviews, babysits and ships. A marked block in `CLAUDE.md` and `AGENTS.md` (`templates/routing.md`) routes every review request to it, ahead of competing review skills. It enforces nothing.
 2. **BugBot rules** (`.cursor/BUGBOT.md`, `.cursor/config/bugbot.yaml`). BugBot does not run skills. It reads these files when it reviews a PR. The YAML is read from the PR's base branch, so a PR cannot change its own review settings.
 3. **The gate** (`.cstack/gate.py`, `.cstack/policy.json`, `.github/workflows/cstack-gate.yml`). A deterministic required check. It is the only layer that can block a merge, and only once a ruleset requires it.
 

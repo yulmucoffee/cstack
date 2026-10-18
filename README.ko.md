@@ -5,7 +5,7 @@
 
 [English](README.md) · **한국어**
 
-**머지 전에 증거부터.** cstack은 **Claude Code, Codex, Cursor**에서 함께 쓰는 에이전트 스킬 하나, **Cursor BugBot**용 리뷰 규칙 파일, 작은 **GitHub 머지 게이트**로 이뤄져 있습니다. Claude Code 팀의 계층형 코드 리뷰 프로세스와 poteto의 [pstack](https://github.com/cursor/plugins/tree/main/pstack) 엔지니어링 원칙을 여러분의 레포에 그대로 가져옵니다.
+**머지 전에 증거부터.** Claude Code, Codex, Cursor에 "PR 리뷰해줘", "코드 검토해줘"라고만 해도 cstack의 리뷰 절차가 돌아갑니다. cstack은 **Claude Code, Codex, Cursor**에서 함께 쓰는 에이전트 스킬 하나, **Cursor BugBot**용 리뷰 규칙 파일, 작은 **GitHub 머지 게이트**로 이뤄져 있습니다. Claude Code 팀의 계층형 코드 리뷰 프로세스와 poteto의 [pstack](https://github.com/cursor/plugins/tree/main/pstack) 엔지니어링 원칙을 여러분의 레포에 그대로 가져옵니다.
 
 목표는 코드나 리뷰 코멘트를 늘리는 것이 아닙니다. 가장 작은 올바른 변경을 실제 화면과 실제 실행으로 증명하고, 새 컨텍스트에서 리뷰하고, 사람의 주의는 위험한 곳에만 쓰는 것입니다.
 
@@ -23,6 +23,7 @@ cstack은 이 둘을 설치하고 읽을 수 있는 파일로 묶었습니다. �
 | --- | --- | --- | --- |
 | 스킬 | `skills/cstack/SKILL.md`와 `references/` | Claude Code, Codex, Cursor 에이전트 | 없음. 에이전트의 작업 방식을 정합니다. |
 | BugBot 규칙 | `.cursor/BUGBOT.md`, `.cursor/config/bugbot.yaml` | 모든 PR의 Cursor BugBot | 없음. BugBot이 무엇을 보고할지 정합니다. |
+| 리뷰 라우팅 | `CLAUDE.md`, `AGENTS.md`의 마커 블록 | Claude Code, Codex, Cursor | 없음. 모든 리뷰 요청을 스킬로 보냅니다. |
 | 리뷰 규칙 | `REVIEW.md` (시작용 템플릿) | 모든 AI 리뷰어와 팀 | 없음. 코드 오너가 다듬습니다. |
 | 머지 게이트 | `.cstack/gate.py`, `.cstack/policy.json`, `.github/workflows/cstack-gate.yml` | GitHub Actions | **있음.** 룰셋에서 `cstack-risk-gate`를 필수로 지정하면 동작합니다. |
 
@@ -51,7 +52,7 @@ git clone https://github.com/yulmucoffee/cstack.git
 python3 cstack/scripts/install.py --global
 ```
 
-`~/.claude/skills/cstack/` (Claude Code)과 `~/.agents/skills/cstack/` (Codex)에 설치하고, 업그레이드 추적용으로 `~/.cstack/manifest.json`을 만듭니다. Cursor는 두 스킬 폴더를 모두 읽습니다. 업그레이드하려면 `git pull` 후 같은 명령을 다시 실행하세요.
+`~/.claude/skills/cstack/` (Claude Code)과 `~/.agents/skills/cstack/` (Codex)에 설치합니다. 설치된 도구에 한해 `~/.claude/CLAUDE.md`와 `~/.codex/AGENTS.md`에 리뷰 라우팅 블록을 넣습니다. 업그레이드 추적용으로 `~/.cstack/manifest.json`도 만듭니다. Cursor는 두 스킬 폴더를 모두 읽습니다. 업그레이드하려면 `git pull` 후 같은 명령을 다시 실행하세요.
 
 **Claude Code 플러그인.** Claude Code 안에서 플러그인으로 설치할 수도 있습니다.
 
@@ -60,7 +61,7 @@ python3 cstack/scripts/install.py --global
 /plugin install cstack@cstack
 ```
 
-Claude Code 2.1.275 이상에서는 `/plugin install cstack --marketplace yulmucoffee/cstack` 한 줄로 끝납니다. 플러그인 스킬은 네임스페이스가 붙어서 `/cstack:cstack`으로 호출합니다.
+Claude Code 2.1.275 이상에서는 `/plugin install cstack --marketplace yulmucoffee/cstack` 한 줄로 끝납니다. 플러그인 스킬은 네임스페이스가 붙어서 `/cstack:cstack`으로 호출합니다. 플러그인은 `CLAUDE.md`를 수정할 수 없으니, [모든 리뷰를 cstack으로](#모든-리뷰를-cstack으로)의 라우팅 문구를 직접 넣어 주세요.
 
 ### 프로젝트용: 스킬, BugBot, 게이트
 
@@ -80,9 +81,10 @@ python3 scripts/install.py --target /path/to/your-repo
 | `.cursor/BUGBOT.md` | 마커 블록 | `<!-- cstack:begin -->` 블록만 교체 |
 | `.cstack/gate.py`, `.github/workflows/cstack-gate.yml` | 관리 파일 | 직접 수정하지 않았으면 업그레이드 |
 | `.cstack/policy.json`, `.cursor/config/bugbot.yaml`, `REVIEW.md`, `.github/pull_request_template.md` | 시드 파일 | 한 번만 만들고 절대 덮어쓰지 않음 |
+| `CLAUDE.md`, `AGENTS.md` | 마커 블록 | 리뷰 라우팅 블록만 추가하거나 교체하고, 나머지 내용은 그대로 둠 |
 | `.cstack/manifest.json` | 기록용 | 관리 파일의 해시 |
 
-옵션은 이렇습니다. `--no-gate`를 주면 게이트 워크플로, `gate.py`, `policy.json`을 건너뛰고, 스킬, BugBot 파일, `REVIEW.md`, PR 템플릿은 그대로 설치합니다. `--hosts claude`, `--hosts codex`, `--hosts claude,codex,cursor`로 스킬 위치를 고릅니다. `--force`는 직접 수정한 관리 파일을 덮어씁니다. 시드 파일은 `--force`로도 덮어쓰지 않습니다. GitHub가 찾는 위치 어디든 PR 템플릿이 이미 있으면 그대로 둡니다.
+옵션은 이렇습니다. `--no-gate`를 주면 게이트 워크플로, `gate.py`, `policy.json`을 건너뛰고, 스킬, BugBot 파일, `REVIEW.md`, PR 템플릿은 그대로 설치합니다. `--hosts claude`, `--hosts codex`, `--hosts claude,codex,cursor`로 스킬 위치를 고릅니다. `--no-routing`을 주면 `CLAUDE.md`와 `AGENTS.md`를 건드리지 않습니다. `@AGENTS.md`만 불러오는 `CLAUDE.md`는 수정하지 않습니다. `AGENTS.md`의 블록이 이미 Claude Code에 전달되기 때문입니다. `--force`는 직접 수정한 관리 파일을 덮어씁니다. 시드 파일은 `--force`로도 덮어쓰지 않습니다. GitHub가 찾는 위치 어디든 PR 템플릿이 이미 있으면 그대로 둡니다.
 
 결과를 커밋하고, 에이전트를 재시작하거나 새 세션을 열어 스킬을 불러오세요. 나중에 업그레이드할 때는 cstack 체크아웃에서 `git pull` 후 같은 명령을 실행합니다. 시드 파일은 여러분 소유라 갱신되지 않으니, 새 키가 생겼는지 `configs/policy.json`과 비교하세요. 필수 체크가 App에 묶여 있지 않으면 게이트가 경고를 출력합니다.
 
@@ -99,6 +101,29 @@ GitHub에서 필수로 지정하기 전까지 게이트는 아무것도 막지 �
 cstack은 스스로 머지하지 않습니다. 게이트 통과는 "머지해도 된다"는 뜻이지 "머지하라"는 뜻이 아닙니다.
 
 ## 사용법
+
+### 모든 리뷰를 cstack으로
+
+스킬 이름을 부를 필요가 없습니다. "이 PR 리뷰해줘", "내 변경사항 검토해줘", "머지해도 돼?", "review PR 42" 같은 요청은 모두 cstack의 리뷰 절차로 들어갑니다.
+1. 대상을 정합니다. PR 번호, 브랜치, 커밋하지 않은 변경 중 하나입니다.
+2. 읽기 전용으로 진행합니다.
+3. 독립 리뷰어 여럿에게 나눠 맡기고, 발견 사항을 하나씩 검증합니다.
+4. 안전의 단 하나의 근거를 증명합니다.
+5. 요청한 언어로 보고합니다.
+
+`/code-review`, `/security-review` 같은 내장 명령도 그대로 쓰이는데, cstack 안의 리뷰어 중 하나로 돌아갑니다.
+
+안정적으로 동작하게 하는 장치는 두 가지입니다. 스킬 설명이 리뷰 요청을 먼저 가져가도록 쓰여 있습니다. 그리고 설치 스크립트가 에이전트가 세션마다 처음 읽는 `CLAUDE.md`와 `AGENTS.md`에 아래 블록을 넣습니다.
+
+```markdown
+## Code review (cstack)
+
+For any request to review code, a diff, a branch, a commit or a pull request, in any wording or language ("review this PR", "code review", "check my changes", "PR 리뷰", "코드 검토"), use the `cstack` skill in `review` mode, even when another review skill or command also matches. Built-in review commands such as `/code-review`, `/security-review` or `/review` run as reviewers inside cstack, not instead of it. Requests to babysit, merge or ship a PR also go through cstack.
+```
+
+Claude Code 플러그인으로 설치했거나 Cursor 전체 프로젝트에 적용하려면, 같은 문구를 `~/.claude/CLAUDE.md` 또는 Cursor의 **Settings → Rules → User Rules**에 붙여 넣으세요.
+
+### 직접 호출하기
 
 | 호스트 | 호출 |
 | --- | --- |
@@ -209,6 +234,7 @@ skills/cstack/references/                  리뷰 루브릭, 머지 플레이북
 .cursor/config/bugbot.yaml                 BugBot 레포 설정
 templates/workflows/cstack-gate.yml        대상 레포에 설치되는 게이트 워크플로
 templates/REVIEW.md                        시작용 REVIEW.md
+templates/routing.md                       CLAUDE.md, AGENTS.md용 리뷰 라우팅 블록
 .github/PULL_REQUEST_TEMPLATE.md           PR 템플릿: Why, Scope, Testing, Risk, How to revert
 configs/policy.json                        기본 게이트 정책
 scripts/gate.py                            게이트 (표준 라이브러리만 사용)

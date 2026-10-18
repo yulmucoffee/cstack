@@ -5,7 +5,7 @@
 
 **English** · [한국어](README.ko.md)
 
-**Evidence before merge.** cstack is one agent skill for **Claude Code, Codex and Cursor**, a rules file for **Cursor BugBot**, and a small **GitHub merge gate**. Together they bring the Claude Code team's layered code-review process and poteto's [pstack](https://github.com/cursor/plugins/tree/main/pstack) engineering discipline into your own repositories.
+**Evidence before merge.** Ask Claude Code, Codex or Cursor to review a PR or your code, in any words, and it runs the cstack review process. cstack is one agent skill for **Claude Code, Codex and Cursor**, a rules file for **Cursor BugBot**, and a small **GitHub merge gate**. Together they bring the Claude Code team's layered code-review process and poteto's [pstack](https://github.com/cursor/plugins/tree/main/pstack) engineering discipline into your own repositories.
 
 The goal is not more code or more review comments. It is the smallest correct change, proven on the real surface, reviewed from a fresh context, with human attention spent only where the risk is.
 
@@ -23,6 +23,7 @@ cstack packages both as files you can install and read, with no service to run.
 | --- | --- | --- | --- |
 | Skill | `skills/cstack/SKILL.md` + `references/` | Claude Code, Codex, Cursor agents | No. It shapes how the agent works. |
 | BugBot rules | `.cursor/BUGBOT.md`, `.cursor/config/bugbot.yaml` | Cursor BugBot on every PR | No. It shapes what BugBot reports. |
+| Review routing | a marked block in `CLAUDE.md` and `AGENTS.md` | Claude Code, Codex, Cursor | No. It sends every review request to the skill. |
 | Review rules | `REVIEW.md` (starter) | Any AI reviewer, and your team | No. Owners tune it. |
 | Merge gate | `.cstack/gate.py`, `.cstack/policy.json`, `.github/workflows/cstack-gate.yml` | GitHub Actions | **Yes**, once a ruleset requires `cstack-risk-gate`. |
 
@@ -51,7 +52,7 @@ git clone https://github.com/yulmucoffee/cstack.git
 python3 cstack/scripts/install.py --global
 ```
 
-This writes `~/.claude/skills/cstack/` (Claude Code) and `~/.agents/skills/cstack/` (Codex), plus `~/.cstack/manifest.json` to track upgrades. Cursor reads both skill folders. Run it again after `git pull` to upgrade.
+This writes `~/.claude/skills/cstack/` (Claude Code) and `~/.agents/skills/cstack/` (Codex), adds the review-routing block to `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` (only for tools you have installed), and writes `~/.cstack/manifest.json` to track upgrades. Cursor reads both skill folders. Run it again after `git pull` to upgrade.
 
 **Claude Code plugin.** Alternatively, install it as a plugin inside Claude Code:
 
@@ -60,7 +61,7 @@ This writes `~/.claude/skills/cstack/` (Claude Code) and `~/.agents/skills/cstac
 /plugin install cstack@cstack
 ```
 
-On Claude Code 2.1.275 or later, `/plugin install cstack --marketplace yulmucoffee/cstack` does both in one step. Plugin skills are namespaced, so you invoke it as `/cstack:cstack`.
+On Claude Code 2.1.275 or later, `/plugin install cstack --marketplace yulmucoffee/cstack` does both in one step. Plugin skills are namespaced, so you invoke it as `/cstack:cstack`. A plugin cannot edit `CLAUDE.md`, so add the routing text from [Every review goes through cstack](#every-review-goes-through-cstack) yourself.
 
 ### Project: skill, BugBot and gate
 
@@ -80,9 +81,10 @@ python3 scripts/install.py --target /path/to/your-repo
 | `.cursor/BUGBOT.md` | marked block | only the `<!-- cstack:begin -->` block is replaced |
 | `.cstack/gate.py`, `.github/workflows/cstack-gate.yml` | managed | upgraded if you have not edited it |
 | `.cstack/policy.json`, `.cursor/config/bugbot.yaml`, `REVIEW.md`, `.github/pull_request_template.md` | seed | created once, never overwritten |
+| `CLAUDE.md`, `AGENTS.md` | marked block | the review-routing block is added or replaced; the rest of the file is untouched |
 | `.cstack/manifest.json` | bookkeeping | hashes of managed files |
 
-Options: `--no-gate` skips the gate workflow, `gate.py` and `policy.json`, and still installs the skill, BugBot files, `REVIEW.md` and the PR template. `--hosts claude`, `--hosts codex` or `--hosts claude,codex,cursor` picks skill locations. `--force` overwrites managed files you edited locally. Seed files are never overwritten, even with `--force`. An existing PR template anywhere GitHub looks for one is left alone.
+Options: `--no-gate` skips the gate workflow, `gate.py` and `policy.json`, and still installs the skill, BugBot files, `REVIEW.md` and the PR template. `--hosts claude`, `--hosts codex` or `--hosts claude,codex,cursor` picks skill locations. `--no-routing` leaves `CLAUDE.md` and `AGENTS.md` alone. A `CLAUDE.md` that only imports `@AGENTS.md` is not touched, since the block in `AGENTS.md` already reaches Claude Code. `--force` overwrites managed files you edited locally. Seed files are never overwritten, even with `--force`. An existing PR template anywhere GitHub looks for one is left alone.
 
 Commit the result. Restart the agent or open a new session so it picks up the skill. To upgrade later, `git pull` in the cstack checkout and run the same command. Seed files stay yours, so compare `configs/policy.json` with your copy for new keys. The gate prints a warning when a required check is not bound to an App.
 
@@ -99,6 +101,29 @@ The gate does nothing until GitHub requires it. Do these in order.
 cstack never merges on its own. A passing gate means "allowed", not "go".
 
 ## Use it
+
+### Every review goes through cstack
+
+You do not have to name the skill. "Review this PR", "check my changes", "is this safe to merge", "PR 42 리뷰해줘" and similar requests all run cstack's review path:
+1. Resolve the target: a PR number, a branch, or your uncommitted work.
+2. Stay read-only.
+3. Fan out to independent reviewers and verify each finding.
+4. Prove the one safety fact.
+5. Report in your language.
+
+Built-in commands like `/code-review` and `/security-review` still run, as reviewers inside cstack.
+
+Two things make this reliable. The skill's description claims review requests, and the installer adds this block to `CLAUDE.md` and `AGENTS.md`, which the agent reads at the start of every session:
+
+```markdown
+## Code review (cstack)
+
+For any request to review code, a diff, a branch, a commit or a pull request, in any wording or language ("review this PR", "code review", "check my changes", "PR 리뷰", "코드 검토"), use the `cstack` skill in `review` mode, even when another review skill or command also matches. Built-in review commands such as `/code-review`, `/security-review` or `/review` run as reviewers inside cstack, not instead of it. Requests to babysit, merge or ship a PR also go through cstack.
+```
+
+For the Claude Code plugin, or for Cursor across all projects, paste the same text into `~/.claude/CLAUDE.md` or into Cursor's **Settings → Rules → User Rules**.
+
+### Invoke it directly
 
 | Host | Invoke |
 | --- | --- |
@@ -209,6 +234,7 @@ skills/cstack/references/                  review rubric, merge playbook, BugBot
 .cursor/config/bugbot.yaml                 BugBot repository config
 templates/workflows/cstack-gate.yml        gate workflow, installed into your repo
 templates/REVIEW.md                        starter REVIEW.md
+templates/routing.md                       review-routing block for CLAUDE.md and AGENTS.md
 .github/PULL_REQUEST_TEMPLATE.md           PR template: Why, Scope, Testing, Risk, How to revert
 configs/policy.json                        default gate policy
 scripts/gate.py                            the gate (stdlib only)
